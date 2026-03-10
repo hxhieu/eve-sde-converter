@@ -396,57 +396,6 @@ export function processTable(tableName: string, unzippedDir: string): InsertRow[
       }
     }
     return rows;
-  } else if (tableName === 'certMasteries') {
-    // Special handling for double-nested masteries structure
-    const rows: InsertRow[] = [];
-    for (const fileName of mapping.files) {
-      const filePath = path.join(unzippedDir, fileName);
-      if (!fs.existsSync(filePath)) {
-        console.warn(`File ${filePath} does not exist, skipping.`);
-        continue;
-      }
-      for (const item of readJsonl(filePath)) {
-        const typeID: number = item._key;
-        if (Array.isArray(item._value)) {
-          for (const masteryLevel of item._value) {
-            const level: number = masteryLevel._key;
-            if (Array.isArray(masteryLevel._value)) {
-              for (const certID of masteryLevel._value) {
-                rows.push({ table: 'certMasteries', columns: ['typeID', 'masteryLevel', 'certID'], values: [typeID, level, certID] });
-              }
-            }
-          }
-        }
-      }
-    }
-    return rows;
-  } else if (tableName === 'certSkills') {
-    // Special handling for skillTypes with multiple cert levels
-    const rows: InsertRow[] = [];
-    const certLevels = ['basic', 'standard', 'improved', 'advanced', 'elite'];
-    const certLevelInts = [0, 1, 2, 3, 4];
-    for (const fileName of mapping.files) {
-      const filePath = path.join(unzippedDir, fileName);
-      if (!fs.existsSync(filePath)) {
-        console.warn(`File ${filePath} does not exist, skipping.`);
-        continue;
-      }
-      for (const item of readJsonl(filePath)) {
-        const certID: number = item._key;
-        if (Array.isArray(item.skillTypes)) {
-          for (const skill of item.skillTypes) {
-            const skillID: number = skill._key;
-            for (let i = 0; i < certLevels.length; i++) {
-              const levelName = certLevels[i];
-              const levelInt = certLevelInts[i];
-              const skillLevel: number = skill[levelName] || 0;
-              rows.push({ table: 'certSkills', columns: ['certID', 'skillID', 'certLevelInt', 'skillLevel', 'certLevelText'], values: [certID, skillID, levelInt, skillLevel, levelName] });
-            }
-          }
-        }
-      }
-    }
-    return rows;
   } else if (tableName === 'trnTranslations') {
     // Special handling for translation data from multiple sources
     const rows: InsertRow[] = [];
@@ -502,11 +451,291 @@ export function processTable(tableName: string, unzippedDir: string): InsertRow[
           pushTranslations(41, item.name);   // tcID=41: mapConstellations.constellationName
         } else if (fileName === 'mapRegions.jsonl' && item.name) {
           pushTranslations(42, item.name);   // tcID=42: mapRegions.regionName
+        } else if (fileName === 'stationOperations.jsonl') {
+          if (item.operationName) pushTranslations(46, item.operationName); // tcID=46: staOperations.operationName
+          if (item.description)   pushTranslations(47, item.description);   // tcID=47: staOperations.description
+        } else if (fileName === 'stationServices.jsonl') {
+          if (item.serviceName)   pushTranslations(48, item.serviceName);   // tcID=48: staServices.serviceName
+        } else if (fileName === 'dogmaUnits.jsonl') {
+          if (item.displayName)   pushTranslations(58, item.displayName);   // tcID=58: eveUnits.displayName
+          if (item.description)   pushTranslations(122, item.description);  // tcID=122: eveUnits.description
+        } else if (fileName === 'dogmaEffects.jsonl') {
+          if (item.displayName)   pushTranslations(74, item.displayName);   // tcID=74: dgmEffects.displayName
+          if (item.description)   pushTranslations(75, item.description);   // tcID=75: dgmEffects.description
+        } else if (fileName === 'landmarks.jsonl') {
+          if (item.name)          pushTranslations(63, item.name);          // tcID=63: mapLandmarks.landmarkName
+          if (item.description)   pushTranslations(64, item.description);   // tcID=64: mapLandmarks.description
+        } else if (fileName === 'npcCorporationDivisions.jsonl') {
+          if (item.name)           pushTranslations(65, item.name);           // tcID=65: crpNPCDivisions.divisionName
+          if (item.leaderTypeName) pushTranslations(66, item.leaderTypeName); // tcID=66: crpNPCDivisions.leaderType
+        } else if (fileName === 'planetSchematics.jsonl') {
+          if (item.name)          pushTranslations(119, item.name);         // tcID=119: planetSchematics.schematicName
+        } else if (fileName === 'npcCorporations.jsonl') {
+          if (item.description)   pushTranslations(138, item.description);  // tcID=138: crpNPCCorporations.description
         }
       }
     }
 
     return rows;
+  } else if (tableName === 'industryActivity') {
+    const activityIdMap: Record<string, number> = {
+      'manufacturing': 1, 'research_time': 3, 'research_material': 4,
+      'copying': 5, 'invention': 8, 'reaction': 11
+    };
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item.blueprintTypeID;
+        if (!item.activities) continue;
+        for (const [actName, actData] of Object.entries(item.activities) as [string, any][]) {
+          const activityID = activityIdMap[actName];
+          if (activityID === undefined) continue;
+          rows.push({ table: 'industryActivity', columns: ['typeID', 'activityID', 'time'], values: [typeID, activityID, actData.time ?? null] });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryActivityMaterials') {
+    const activityIdMap: Record<string, number> = {
+      'manufacturing': 1, 'research_time': 3, 'research_material': 4,
+      'copying': 5, 'invention': 8, 'reaction': 11
+    };
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item.blueprintTypeID;
+        if (!item.activities) continue;
+        for (const [actName, actData] of Object.entries(item.activities) as [string, any][]) {
+          const activityID = activityIdMap[actName];
+          if (activityID === undefined || !Array.isArray(actData.materials)) continue;
+          for (const mat of actData.materials) {
+            rows.push({ table: 'industryActivityMaterials', columns: ['typeID', 'activityID', 'materialTypeID', 'quantity'], values: [typeID, activityID, mat.typeID, mat.quantity] });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryActivityProducts') {
+    const activityIdMap: Record<string, number> = {
+      'manufacturing': 1, 'research_time': 3, 'research_material': 4,
+      'copying': 5, 'invention': 8, 'reaction': 11
+    };
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item.blueprintTypeID;
+        if (!item.activities) continue;
+        for (const [actName, actData] of Object.entries(item.activities) as [string, any][]) {
+          const activityID = activityIdMap[actName];
+          if (activityID === undefined || !Array.isArray(actData.products)) continue;
+          for (const prod of actData.products) {
+            rows.push({ table: 'industryActivityProducts', columns: ['typeID', 'activityID', 'productTypeID', 'quantity'], values: [typeID, activityID, prod.typeID, prod.quantity] });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryActivityProbabilities') {
+    const activityIdMap: Record<string, number> = {
+      'manufacturing': 1, 'research_time': 3, 'research_material': 4,
+      'copying': 5, 'invention': 8, 'reaction': 11
+    };
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item.blueprintTypeID;
+        if (!item.activities) continue;
+        for (const [actName, actData] of Object.entries(item.activities) as [string, any][]) {
+          const activityID = activityIdMap[actName];
+          if (activityID === undefined || !Array.isArray(actData.products)) continue;
+          for (const prod of actData.products) {
+            if (prod.probability != null) {
+              rows.push({ table: 'industryActivityProbabilities', columns: ['typeID', 'activityID', 'productTypeID', 'probability'], values: [typeID, activityID, prod.typeID, prod.probability] });
+            }
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryActivitySkills') {
+    const activityIdMap: Record<string, number> = {
+      'manufacturing': 1, 'research_time': 3, 'research_material': 4,
+      'copying': 5, 'invention': 8, 'reaction': 11
+    };
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item.blueprintTypeID;
+        if (!item.activities) continue;
+        for (const [actName, actData] of Object.entries(item.activities) as [string, any][]) {
+          const activityID = activityIdMap[actName];
+          if (activityID === undefined || !Array.isArray(actData.skills)) continue;
+          for (const skill of actData.skills) {
+            rows.push({ table: 'industryActivitySkills', columns: ['typeID', 'activityID', 'skillID', 'level'], values: [typeID, activityID, skill.typeID, skill.level] });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'invTraits') {
+    // Auto-increment traitID, flatten roleBonuses (skillID=-1) and types (skillID=type._key)
+    const rows: InsertRow[] = [];
+    let traitID = 1;
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        const typeID = item._key;
+        if (Array.isArray(item.roleBonuses)) {
+          for (const rb of item.roleBonuses) {
+            rows.push({ table: 'invTraits', columns: ['traitID', 'typeID', 'skillID', 'bonus', 'bonusText', 'unitID'], values: [traitID++, typeID, -1, rb.bonus, rb.bonusText?.en || null, rb.unitID ?? null] });
+          }
+        }
+        if (Array.isArray(item.types)) {
+          for (const t of item.types) {
+            const skillID = t._key;
+            if (Array.isArray(t._value)) {
+              for (const bonus of t._value) {
+                rows.push({ table: 'invTraits', columns: ['traitID', 'typeID', 'skillID', 'bonus', 'bonusText', 'unitID'], values: [traitID++, typeID, skillID, bonus.bonus, bonus.bonusText?.en || null, bonus.unitID ?? null] });
+              }
+            }
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'certMasteries') {
+    // masteries.jsonl: _key = typeID, _value = [{_key: masteryLevel, _value: [certID, ...]}]
+    const rows: InsertRow[] = [];
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) { console.warn(`File ${filePath} does not exist, skipping.`); continue; }
+      for (const item of readJsonl(filePath)) {
+        const typeID: number = item._key;
+        if (!Array.isArray(item._value)) continue;
+        for (const masteryEntry of item._value) {
+          const masteryLevel: number = masteryEntry._key;
+          if (!Array.isArray(masteryEntry._value)) continue;
+          for (const certID of masteryEntry._value) {
+            rows.push({ table: 'certMasteries', columns: ['typeID', 'masteryLevel', 'certID'], values: [typeID, masteryLevel, certID] });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'certSkills') {
+    // certificates.jsonl: _key = certID, skillTypes = [{_key: skillID, basic, standard, improved, advanced, elite}]
+    const rows: InsertRow[] = [];
+    const levelMap: Array<{ name: keyof typeof levelInt; int: number; text: string }> = [
+      { name: 'basic',    int: 1, text: 'basic'    },
+      { name: 'standard', int: 2, text: 'standard' },
+      { name: 'improved', int: 3, text: 'improved' },
+      { name: 'advanced', int: 4, text: 'advanced' },
+      { name: 'elite',    int: 5, text: 'elite'    },
+    ];
+    const levelInt = { basic: 1, standard: 2, improved: 3, advanced: 4, elite: 5 };
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) { console.warn(`File ${filePath} does not exist, skipping.`); continue; }
+      for (const item of readJsonl(filePath)) {
+        const certID: number = item._key;
+        if (!Array.isArray(item.skillTypes)) continue;
+        for (const st of item.skillTypes) {
+          const skillID: number = st._key;
+          for (const lv of levelMap) {
+            const skillLevel: number = st[lv.name];
+            if (skillLevel == null || skillLevel === 0) continue;
+            rows.push({ table: 'certSkills', columns: ['certID', 'skillID', 'certLevelInt', 'skillLevel', 'certLevelText'], values: [certID, skillID, lv.int, skillLevel, lv.text] });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'trnTranslationLanguages') {
+    // Assign sequential numericLanguageID to each language
+    const rows: InsertRow[] = [];
+    let numericID = 1;
+    for (const fileName of mapping.files) {
+      const filePath = path.join(unzippedDir, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      for (const item of readJsonl(filePath)) {
+        rows.push({ table: 'trnTranslationLanguages', columns: ['numericLanguageID', 'languageID', 'languageName'], values: [numericID++, item._key, item.name] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'mapSolarSystemJumps' || tableName === 'mapConstellationJumps' || tableName === 'mapRegionJumps') {
+    // Build solar system → constellation/region lookup
+    const systemInfo = new Map<number, { constellationID: number; regionID: number }>();
+    const systemsPath = path.join(unzippedDir, 'mapSolarSystems.jsonl');
+    if (fs.existsSync(systemsPath)) {
+      for (const item of readJsonl(systemsPath)) {
+        systemInfo.set(item._key, { constellationID: item.constellationID, regionID: item.regionID });
+      }
+    }
+    const stargatesPath = path.join(unzippedDir, 'mapStargates.jsonl');
+    if (!fs.existsSync(stargatesPath)) return [];
+
+    if (tableName === 'mapSolarSystemJumps') {
+      const rows: InsertRow[] = [];
+      const seen = new Set<string>();
+      for (const item of readJsonl(stargatesPath)) {
+        const fromSystem = item.solarSystemID;
+        const toSystem = item.destination?.solarSystemID;
+        if (!fromSystem || !toSystem) continue;
+        const key = `${fromSystem}|${toSystem}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const fromInfo = systemInfo.get(fromSystem) || { constellationID: null as any, regionID: null as any };
+        const toInfo = systemInfo.get(toSystem) || { constellationID: null as any, regionID: null as any };
+        rows.push({ table: 'mapSolarSystemJumps', columns: ['fromRegionID', 'fromConstellationID', 'fromSolarSystemID', 'toSolarSystemID', 'toConstellationID', 'toRegionID'], values: [fromInfo.regionID, fromInfo.constellationID, fromSystem, toSystem, toInfo.constellationID, toInfo.regionID] });
+      }
+      return rows;
+    } else if (tableName === 'mapConstellationJumps') {
+      const rows: InsertRow[] = [];
+      const seen = new Set<string>();
+      for (const item of readJsonl(stargatesPath)) {
+        const fromSystem = item.solarSystemID;
+        const toSystem = item.destination?.solarSystemID;
+        if (!fromSystem || !toSystem) continue;
+        const fromInfo = systemInfo.get(fromSystem);
+        const toInfo = systemInfo.get(toSystem);
+        if (!fromInfo || !toInfo) continue;
+        if (fromInfo.constellationID === toInfo.constellationID) continue;
+        const key = `${fromInfo.constellationID}|${toInfo.constellationID}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({ table: 'mapConstellationJumps', columns: ['fromRegionID', 'fromConstellationID', 'toConstellationID', 'toRegionID'], values: [fromInfo.regionID, fromInfo.constellationID, toInfo.constellationID, toInfo.regionID] });
+      }
+      return rows;
+    } else {
+      // mapRegionJumps
+      const rows: InsertRow[] = [];
+      const seen = new Set<string>();
+      for (const item of readJsonl(stargatesPath)) {
+        const fromSystem = item.solarSystemID;
+        const toSystem = item.destination?.solarSystemID;
+        if (!fromSystem || !toSystem) continue;
+        const fromInfo = systemInfo.get(fromSystem);
+        const toInfo = systemInfo.get(toSystem);
+        if (!fromInfo || !toInfo) continue;
+        if (fromInfo.regionID === toInfo.regionID) continue;
+        const key = `${fromInfo.regionID}|${toInfo.regionID}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({ table: 'mapRegionJumps', columns: ['fromRegionID', 'toRegionID'], values: [fromInfo.regionID, toInfo.regionID] });
+      }
+      return rows;
+    }
   } else {
     const rows: InsertRow[] = [];
     const columns: string[] = mapping.fields.map((f: any) => typeof f === 'string' ? f : f.name);
@@ -969,29 +1198,27 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'graphicID'
     ]
   },
-  'chrFactions': {
-    files: ['factions.jsonl'],
-    fields: [
-      { name: 'factionID', transform: (item) => item._key },
-      { name: 'factionName', transform: (item) => item.name?.en || '' },
-      { name: 'description', transform: (item) => item.description?.en || '' },
-      'raceIDs',
-      'solarSystemID',
-      'corporationID',
-      'sizeFactor',
-      'stationCount',
-      'stationSystemCount',
-      'militiaCorporationID',
-      'iconID'
-    ]
-  },
   'dgmTypeAttributes': {
     files: ['typeDogma.jsonl'],
     fields: [
       { name: 'typeID', transform: (item) => item._key },
       { name: 'attributeID', transform: (item, subItem) => subItem?.attributeID },
-      { name: 'valueInt', transform: (item, subItem) => subItem?.value },
-      { name: 'valueFloat', transform: (item, subItem) => null }
+      {
+        name: 'valueInt',
+        transform: (item, subItem) => {
+          const v = subItem?.value;
+          if (v == null) return null;
+          return Number.isInteger(v) ? v : null;
+        }
+      },
+      {
+        name: 'valueFloat',
+        transform: (item, subItem) => {
+          const v = subItem?.value;
+          if (v == null) return null;
+          return Number.isInteger(v) ? null : v;
+        }
+      }
     ],
     expand: 'dogmaAttributes'
   },
@@ -1134,43 +1361,51 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       { name: 'name', transform: (item) => item.name?.en || '' }
     ]
   },
+  'certMasteries': {
+    files: ['masteries.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'certSkills': {
+    files: ['certificates.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
   'chrAncestries': {
     files: ['ancestries.jsonl'],
     fields: [
-      { name: 'ancestryID', transform: (item) => item._key },
-      { name: 'ancestryName', transform: (item) => item.name?.en || '' },
+      { name: 'ancestryID', transform: (item: any) => item._key },
+      { name: 'ancestryName', transform: (item: any) => item.name?.en || '' },
       'bloodlineID',
-      { name: 'description', transform: (item) => item.description?.en || null },
+      { name: 'description', transform: (item: any) => item.description?.en || null },
       'perception',
       'willpower',
       'charisma',
       'memory',
       'intelligence',
       'iconID',
-      'shortDescription'
+      { name: 'shortDescription', transform: (item: any) => item.shortDescription || null }
     ]
   },
   'chrAttributes': {
     files: ['characterAttributes.jsonl'],
     fields: [
-      { name: 'attributeID', transform: (item) => item._key },
-      { name: 'attributeName', transform: (item) => item.name?.en || '' },
-      { name: 'description', transform: (item) => item.description || null },
+      { name: 'attributeID', transform: (item: any) => item._key },
+      { name: 'attributeName', transform: (item: any) => item.name?.en || '' },
+      { name: 'description', transform: (item: any) => item.description || null },
       'iconID',
-      'shortDescription',
-      'notes'
+      { name: 'shortDescription', transform: (item: any) => item.shortDescription || null },
+      { name: 'notes', transform: (item: any) => item.notes || null }
     ]
   },
   'chrBloodlines': {
     files: ['bloodlines.jsonl'],
     fields: [
-      { name: 'bloodlineID', transform: (item) => item._key },
-      { name: 'bloodlineName', transform: (item) => item.name?.en || '' },
+      { name: 'bloodlineID', transform: (item: any) => item._key },
+      { name: 'bloodlineName', transform: (item: any) => item.name?.en || '' },
       'raceID',
-      { name: 'description', transform: (item) => item.description?.en || null },
-      { name: 'maleDescription', transform: (item) => null },
-      { name: 'femaleDescription', transform: (item) => null },
-      { name: 'shipTypeID', transform: (item) => null },
+      { name: 'description', transform: (item: any) => item.description?.en || null },
+      { name: 'maleDescription', transform: (item: any) => null },
+      { name: 'femaleDescription', transform: (item: any) => null },
+      { name: 'shipTypeID', transform: (item: any) => item.shipTypeID ?? null },
       'corporationID',
       'perception',
       'willpower',
@@ -1178,29 +1413,36 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'memory',
       'intelligence',
       'iconID',
-      { name: 'shortDescription', transform: (item) => null },
-      { name: 'shortMaleDescription', transform: (item) => null },
-      { name: 'shortFemaleDescription', transform: (item) => null }
+      { name: 'shortDescription', transform: (item: any) => item.shortDescription || null },
+      { name: 'shortMaleDescription', transform: (item: any) => null },
+      { name: 'shortFemaleDescription', transform: (item: any) => null }
     ]
   },
-  'chrRaces': {
-    files: ['races.jsonl'],
+  'chrFactions': {
+    files: ['factions.jsonl'],
     fields: [
-      { name: 'raceID', transform: (item) => item._key },
-      { name: 'raceName', transform: (item) => item.name?.en || '' },
-      { name: 'description', transform: (item) => item.description?.en || null },
-      'iconID',
-      { name: 'shortDescription', transform: (item) => null }
+      { name: 'factionID', transform: (item: any) => item._key },
+      { name: 'factionName', transform: (item: any) => item.name?.en || '' },
+      { name: 'description', transform: (item: any) => item.description?.en || null },
+      { name: 'raceIDs', transform: (item: any) => Array.isArray(item.memberRaces) && item.memberRaces.length > 0 ? item.memberRaces[0] : null },
+      'solarSystemID',
+      'corporationID',
+      'sizeFactor',
+      { name: 'stationCount', transform: (item: any) => item.stationCount ?? null },
+      { name: 'stationSystemCount', transform: (item: any) => item.stationSystemCount ?? null },
+      'militiaCorporationID',
+      'iconID'
     ]
   },
   'crpActivities': {
     files: ['corporationActivities.jsonl'],
     fields: [
-      { name: 'activityID', transform: (item) => item._key },
-      { name: 'activityName', transform: (item) => item.name?.en || '' },
-      { name: 'description', transform: (item) => null }
+      { name: 'activityID', transform: (item: any) => item._key },
+      { name: 'activityName', transform: (item: any) => item.name?.en || '' },
+      { name: 'description', transform: (item: any) => null }
     ]
   },
+
   'dgmAttributeCategories': {
     files: ['dogmaAttributeCategories.jsonl'],
     fields: [
@@ -1233,9 +1475,9 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       { name: 'effectCategory', transform: (item) => item.effectCategoryID ?? null },
       { name: 'preExpression', transform: (item) => null },
       { name: 'postExpression', transform: (item) => null },
-      { name: 'description', transform: (item) => null },
+      { name: 'description', transform: (item) => item.description?.en || null },
       'guid',
-      { name: 'iconID', transform: (item) => null },
+      { name: 'iconID', transform: (item) => item.iconID ?? null },
       'isOffensive',
       'isAssistance',
       'durationAttributeID',
@@ -1245,12 +1487,24 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'falloffAttributeID',
       'disallowAutoRepeat',
       { name: 'published', transform: (item) => item.published ?? false },
-      { name: 'displayName', transform: (item) => null },
+      { name: 'displayName', transform: (item) => item.displayName?.en || null },
       'isWarpSafe',
       'rangeChance',
       'electronicChance',
       'propulsionChance',
-      'distribution'
+      'distribution',
+      { name: 'sfxName', transform: (item) => null },
+      'npcUsageChanceAttributeID',
+      'npcActivationChanceAttributeID',
+      'fittingUsageChanceAttributeID',
+      { name: 'modifierInfo', transform: (item) => {
+        if (!item.modifierInfo || !item.modifierInfo.length) return null;
+        // Serialize back to the original YAML list format used in the legacy SDE
+        return item.modifierInfo.map((m: Record<string, unknown>) => {
+          const entries = Object.entries(m);
+          return entries.map(([k, v], i) => (i === 0 ? `- ${k}: ${v}` : `  ${k}: ${v}`)).join('\n');
+        }).join('\n') + '\n';
+      }}
     ]
   },
   'eveGraphics': {
@@ -1476,17 +1730,162 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'iconID'
     ]
   },
-  'certMasteries': {
-    files: ['masteries.jsonl'],
-    fields: [] // Custom processing in processTable function
-  },
-  'certSkills': {
-    files: ['certificates.jsonl'],
-    fields: [] // Custom processing in processTable function
-  },
   'trnTranslations': {
-    files: ['categories.jsonl', 'groups.jsonl', 'types.jsonl', 'metaGroups.jsonl', 'marketGroups.jsonl', 'typeBonus.jsonl', 'mapSolarSystems.jsonl', 'mapConstellations.jsonl', 'mapRegions.jsonl'],
+    files: ['categories.jsonl', 'groups.jsonl', 'types.jsonl', 'metaGroups.jsonl', 'marketGroups.jsonl', 'typeBonus.jsonl', 'mapSolarSystems.jsonl', 'mapConstellations.jsonl', 'mapRegions.jsonl', 'stationOperations.jsonl', 'stationServices.jsonl', 'dogmaUnits.jsonl', 'dogmaEffects.jsonl', 'landmarks.jsonl', 'npcCorporationDivisions.jsonl', 'planetSchematics.jsonl', 'npcCorporations.jsonl'],
     fields: [] // Custom processing in processTable function
+  },
+  'agtResearchAgents': {
+    files: ['npcCharacters.jsonl'],
+    fields: [
+      { name: 'agentID', transform: (item: any) => item._key },
+      { name: 'typeID', transform: (item: any, subItem: any) => subItem?.typeID }
+    ],
+    expand: 'skills',
+    filter: (item: any) => item.agent != null && Array.isArray(item.skills) && item.skills.length > 0
+  },
+  'crpNPCDivisions': {
+    files: ['npcCorporationDivisions.jsonl'],
+    fields: [
+      { name: 'divisionID', transform: (item: any) => item._key },
+      { name: 'divisionName', transform: (item: any) => item.name?.en || '' },
+      { name: 'description', transform: (item: any) => item.description?.en || null },
+      { name: 'leaderType', transform: (item: any) => item.leaderTypeName?.en || null }
+    ]
+  },
+  'industryActivity': {
+    files: ['blueprints.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryActivityMaterials': {
+    files: ['blueprints.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryActivityProducts': {
+    files: ['blueprints.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryActivityProbabilities': {
+    files: ['blueprints.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryActivitySkills': {
+    files: ['blueprints.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'invTraits': {
+    files: ['typeBonus.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'invVolumes': {
+    files: ['types.jsonl'],
+    fields: [
+      { name: 'typeID', transform: (item: any) => item._key },
+      'volume'
+    ],
+    filter: (item: any) => item.volume != null && item.volume !== undefined
+  },
+  'skins': {
+    files: ['skins.jsonl'],
+    fields: [
+      { name: 'skinID', transform: (item: any) => item._key },
+      'internalName',
+      'skinMaterialID'
+    ]
+  },
+  'staOperationServices': {
+    files: ['stationOperations.jsonl'],
+    fields: [
+      { name: 'operationID', transform: (item: any) => item._key },
+      { name: 'serviceID', transform: (item: any, subItem: any) => subItem }
+    ],
+    expand: 'services'
+  },
+  'staOperations': {
+    files: ['stationOperations.jsonl'],
+    fields: [
+      'activityID',
+      { name: 'operationID', transform: (item: any) => item._key },
+      { name: 'operationName', transform: (item: any) => item.operationName?.en || null },
+      { name: 'description', transform: (item: any) => item.description?.en || null },
+      { name: 'fringe', transform: (item: any) => item.fringe ?? null },
+      { name: 'corridor', transform: (item: any) => item.corridor ?? null },
+      { name: 'hub', transform: (item: any) => item.hub ?? null },
+      { name: 'border', transform: (item: any) => item.border ?? null },
+      { name: 'ratio', transform: (item: any) => item.ratio ?? null },
+      { name: 'caldariStationTypeID', transform: (item: any) => item.stationTypes?.find((s: any) => s._key === 1)?._value ?? null },
+      { name: 'minmatarStationTypeID', transform: (item: any) => item.stationTypes?.find((s: any) => s._key === 2)?._value ?? null },
+      { name: 'amarrStationTypeID', transform: (item: any) => item.stationTypes?.find((s: any) => s._key === 4)?._value ?? null },
+      { name: 'gallenteStationTypeID', transform: (item: any) => item.stationTypes?.find((s: any) => s._key === 8)?._value ?? null },
+      { name: 'joveStationTypeID', transform: (item: any) => item.stationTypes?.find((s: any) => s._key === 16)?._value ?? null }
+    ]
+  },
+  'staServices': {
+    files: ['stationServices.jsonl'],
+    fields: [
+      { name: 'serviceID', transform: (item: any) => item._key },
+      { name: 'serviceName', transform: (item: any) => item.serviceName?.en || '' },
+      { name: 'description', transform: (item: any) => null }
+    ]
+  },
+  'trnTranslationLanguages': {
+    files: ['translationLanguages.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'mapJumps': {
+    files: ['mapStargates.jsonl'],
+    fields: [
+      { name: 'stargateID', transform: (item: any) => item._key },
+      { name: 'destinationID', transform: (item: any) => item.destination?.stargateID ?? null }
+    ]
+  },
+  'mapSolarSystemJumps': {
+    files: ['mapStargates.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'mapConstellationJumps': {
+    files: ['mapStargates.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'mapRegionJumps': {
+    files: ['mapStargates.jsonl'],
+    fields: [] // Custom processing in processTable function
+  },
+  'mapCelestialStatistics': {
+    files: ['mapStars.jsonl', 'mapPlanets.jsonl', 'mapMoons.jsonl'],
+    fields: [
+      { name: 'celestialID', transform: (item: any) => item._key },
+      { name: 'temperature', transform: (item: any) => item.statistics?.temperature ?? null },
+      { name: 'spectralClass', transform: (item: any) => item.statistics?.spectralClass ?? null },
+      { name: 'luminosity', transform: (item: any) => item.statistics?.luminosity ?? null },
+      { name: 'age', transform: (item: any) => item.statistics?.age ?? null },
+      { name: 'life', transform: (item: any) => item.statistics?.life ?? null },
+      { name: 'orbitRadius', transform: (item: any) => item.statistics?.orbitRadius ?? null },
+      { name: 'eccentricity', transform: (item: any) => item.statistics?.eccentricity ?? null },
+      { name: 'massDust', transform: (item: any) => item.statistics?.massDust ?? null },
+      { name: 'massGas', transform: (item: any) => item.statistics?.massGas ?? null },
+      { name: 'fragmented', transform: (item: any) => item.statistics?.fragmented ?? null },
+      { name: 'density', transform: (item: any) => item.statistics?.density ?? null },
+      { name: 'surfaceGravity', transform: (item: any) => item.statistics?.surfaceGravity ?? null },
+      { name: 'escapeVelocity', transform: (item: any) => item.statistics?.escapeVelocity ?? null },
+      { name: 'orbitPeriod', transform: (item: any) => item.statistics?.orbitPeriod ?? null },
+      { name: 'rotationRate', transform: (item: any) => item.statistics?.rotationRate ?? null },
+      { name: 'locked', transform: (item: any) => item.statistics?.locked ?? null },
+      { name: 'pressure', transform: (item: any) => item.statistics?.pressure ?? null },
+      { name: 'radius', transform: (item: any) => item.radius ?? null },
+      { name: 'mass', transform: (item: any) => null }
+    ],
+    filter: (item: any) => item.statistics != null
+  },
+  'mapCelestialGraphics': {
+    files: ['mapPlanets.jsonl', 'mapMoons.jsonl'],
+    fields: [
+      { name: 'celestialID', transform: (item: any) => item._key },
+      { name: 'heightMap1', transform: (item: any) => item.attributes?.heightMap1 ?? null },
+      { name: 'heightMap2', transform: (item: any) => item.attributes?.heightMap2 ?? null },
+      { name: 'shaderPreset', transform: (item: any) => item.attributes?.shaderPreset ?? null },
+      { name: 'population', transform: (item: any) => item.attributes?.population != null ? (item.attributes.population ? 1 : 0) : null }
+    ],
+    filter: (item: any) => item.attributes != null
   },
 };
 

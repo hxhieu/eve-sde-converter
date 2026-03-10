@@ -66,18 +66,7 @@ The tool will:
 
 ## TC ID
 
-| TC ID | Description |
-| :-------: | :-------------: |
-| 6 | invCategories.categoryName |
-| 7 | invGroups.groupName |
-| 8 | invTypes.typeName |
-| 33 | invTypes.description |
-| 34 | invMetaGroups.description |
-| 35 | invMetaGroups.metaGroupName |
-| 36 | invMarketGroups.marketGroupName |
-| 40 | mapSolarSystems.name |
-| 41 | mapConstellations.name |
-| 42 | mapRegions.name |
+trnTranslationColumns
 
 ## Project Structure
 

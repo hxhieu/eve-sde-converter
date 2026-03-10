@@ -1,47 +1,54 @@
 ### These tables are not processed which origin fuzzwork dumps have.
 
-- agtResearchAgents
+- ~~agtResearchAgents~~ ✅
+- ~~crpNPCDivisions~~ ✅
+- ~~industryActivity~~ ✅
+- ~~industryActivityMaterials~~ ✅
+- ~~industryActivityProbabilities~~ ✅
+- ~~industryActivityProducts~~ ✅
+- ~~industryActivitySkills~~ ✅
+- ~~invTraits~~ ✅
+- ~~invVolumes~~ ✅
+- ~~mapCelestialGraphics~~ ✅
+- ~~mapCelestialStatistics~~ ✅
+- ~~mapConstellationJumps~~ ✅
+- ~~mapJumps~~ ✅
+- ~~mapRegionJumps~~ ✅
+- ~~mapSolarSystemJumps~~ ✅
+- ~~mapUniverse~~ ✅ (static INSERT data in schema.sql)
+- ~~skins~~ ✅
+- ~~staOperationServices~~ ✅
+- ~~staOperations~~ ✅
+- ~~staServices~~ ✅
+- ~~trnTranslationColumns~~ ✅ (static INSERT data in schema.sql)
+- ~~trnTranslationLanguages~~ ✅
+- certMasteries
+- certSkills
 - charFactions
+- chrAncestries
+- chrAttributes
+- chrBloodlines
+- chrFactions
+- chrRaces
+- crpActivities
 - crpNPCCorporationDivisions
 - crpNPCCorporationResearchFields
 - crpNPCCorporationTrades
-- crpNPCDivisions
 - dgmExpressions
-- industryActivity
-- industryActivityMaterials
-- industryActivityProbabilities
-- industryActivityProducts
 - industryActivityRaces
-- industryActivitySkills
 - invControlTowerResourcePurposes
-- invFlags
 - invItems
 - invPositions
-- invTraits
 - invTypeReactions
-- invVolumes
-- mapCelestialGraphics
-- mapCelestialStatistics
-- mapConstellationJumps
-- mapJumps
 - mapLocationScenes
 - mapLocationWormholeClasses
-- mapRegionJumps
-- mapSolarSystemJumps
-- mapUniverse
 - ramActivities
 - ramAssemblyLineStations
 - ramAssemblyLineTypeDetailPerCategory
 - ramAssemblyLineTypeDetailPerGroup
 - ramAssemblyLineTypes
 - ramInstallationTypeContents
-- skins
-- staOperationServices
-- staOperations
-- staServices
 - staStationTypes
 - translationTables
-- trnTranslationColumns
-- trnTranslationLanguages
 - warCombatZoneSystems
 - warCombatZones

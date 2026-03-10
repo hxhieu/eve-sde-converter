@@ -196,12 +196,6 @@ LOCK TABLES `certSkills` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `charFactions`
---
--- 
-
--- 
---
 -- Table structure for table `chrAncestries`
 --
 
@@ -331,32 +325,6 @@ LOCK TABLES `chrFactions` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `chrRaces`
---
-
-DROP TABLE IF EXISTS `chrRaces`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `chrRaces` (
-  `raceID` int(11) NOT NULL,
-  `raceName` varchar(100) DEFAULT NULL,
-  `description` varchar(1000) DEFAULT NULL,
-  `iconID` int(11) DEFAULT NULL,
-  `shortDescription` varchar(500) DEFAULT NULL,
-  PRIMARY KEY (`raceID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `chrRaces`
---
-
-LOCK TABLES `chrRaces` WRITE;
-/*!40000 ALTER TABLE `chrRaces` DISABLE KEYS */;
-/*!40000 ALTER TABLE `chrRaces` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `crpActivities`
 --
 
@@ -380,24 +348,6 @@ LOCK TABLES `crpActivities` WRITE;
 /*!40000 ALTER TABLE `crpActivities` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `crpNPCCorporationDivisions`
---
--- 
-
--- 
---
--- Table structure for table `crpNPCCorporationResearchFields`
---
--- 
-
--- 
---
--- Table structure for table `crpNPCCorporationTrades`
---
--- 
-
--- 
 --
 -- Table structure for table `crpNPCCorporations`
 --
@@ -451,9 +401,28 @@ UNLOCK TABLES;
 --
 -- Table structure for table `crpNPCDivisions`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `crpNPCDivisions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `crpNPCDivisions` (
+  `divisionID` int(11) NOT NULL,
+  `divisionName` varchar(100) DEFAULT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  `leaderType` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`divisionID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `crpNPCDivisions`
+--
+
+LOCK TABLES `crpNPCDivisions` WRITE;
+/*!40000 ALTER TABLE `crpNPCDivisions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `crpNPCDivisions` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `dgmAttributeCategories`
 --
@@ -571,11 +540,13 @@ LOCK TABLES `dgmEffects` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `dgmExpressions`
 --
--- 
 
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `dgmTypeAttributes`
 --
@@ -706,39 +677,141 @@ UNLOCK TABLES;
 --
 -- Table structure for table `industryActivity`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `industryActivity`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `industryActivity` (
+  `typeID` int(11) NOT NULL,
+  `activityID` int(11) NOT NULL,
+  `time` int(11) DEFAULT NULL,
+  PRIMARY KEY (`typeID`,`activityID`),
+  KEY `ix_industryActivity_activityID` (`activityID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industryActivity`
+--
+
+LOCK TABLES `industryActivity` WRITE;
+/*!40000 ALTER TABLE `industryActivity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `industryActivity` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `industryActivityMaterials`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `industryActivityMaterials`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `industryActivityMaterials` (
+  `typeID` int(11) DEFAULT NULL,
+  `activityID` int(11) DEFAULT NULL,
+  `materialTypeID` int(11) DEFAULT NULL,
+  `quantity` int(11) DEFAULT NULL,
+  KEY `industryActivityMaterials_idx1` (`typeID`,`activityID`),
+  KEY `ix_industryActivityMaterials_typeID` (`typeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industryActivityMaterials`
+--
+
+LOCK TABLES `industryActivityMaterials` WRITE;
+/*!40000 ALTER TABLE `industryActivityMaterials` DISABLE KEYS */;
+/*!40000 ALTER TABLE `industryActivityMaterials` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `industryActivityProbabilities`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `industryActivityProbabilities`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `industryActivityProbabilities` (
+  `typeID` int(11) DEFAULT NULL,
+  `activityID` int(11) DEFAULT NULL,
+  `productTypeID` int(11) DEFAULT NULL,
+  `probability` decimal(3,2) DEFAULT NULL,
+  KEY `ix_industryActivityProbabilities_typeID` (`typeID`),
+  KEY `ix_industryActivityProbabilities_productTypeID` (`productTypeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industryActivityProbabilities`
+--
+
+LOCK TABLES `industryActivityProbabilities` WRITE;
+/*!40000 ALTER TABLE `industryActivityProbabilities` DISABLE KEYS */;
+/*!40000 ALTER TABLE `industryActivityProbabilities` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `industryActivityProducts`
 --
--- 
 
--- 
---
--- Table structure for table `industryActivityRaces`
---
--- 
+DROP TABLE IF EXISTS `industryActivityProducts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `industryActivityProducts` (
+  `typeID` int(11) DEFAULT NULL,
+  `activityID` int(11) DEFAULT NULL,
+  `productTypeID` int(11) DEFAULT NULL,
+  `quantity` int(11) DEFAULT NULL,
+  KEY `ix_industryActivityProducts_typeID` (`typeID`),
+  KEY `ix_industryActivityProducts_productTypeID` (`productTypeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 
+--
+-- Dumping data for table `industryActivityProducts`
+--
+
+LOCK TABLES `industryActivityProducts` WRITE;
+/*!40000 ALTER TABLE `industryActivityProducts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `industryActivityProducts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `industryActivitySkills`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `industryActivitySkills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `industryActivitySkills` (
+  `typeID` int(11) DEFAULT NULL,
+  `activityID` int(11) DEFAULT NULL,
+  `skillID` int(11) DEFAULT NULL,
+  `level` int(11) DEFAULT NULL,
+  KEY `industryActivitySkills_idx1` (`typeID`,`activityID`),
+  KEY `ix_industryActivitySkills_typeID` (`typeID`),
+  KEY `ix_industryActivitySkills_skillID` (`skillID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industryActivitySkills`
+--
+
+LOCK TABLES `industryActivitySkills` WRITE;
+/*!40000 ALTER TABLE `industryActivitySkills` DISABLE KEYS */;
+/*!40000 ALTER TABLE `industryActivitySkills` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `industryBlueprints`
 --
@@ -817,11 +890,13 @@ LOCK TABLES `invContrabandTypes` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invControlTowerResourcePurposes`
 --
--- 
 
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `invControlTowerResources`
 --
@@ -852,7 +927,6 @@ UNLOCK TABLES;
 --
 -- Table structure for table `invFlags`
 --
--- 
 
 DROP TABLE IF EXISTS `invFlags`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -876,7 +950,6 @@ INSERT INTO `invFlags` VALUES (0,'None','None',0),(1,'Wallet','Wallet',10),(2,'O
 /*!40000 ALTER TABLE `invFlags` ENABLE KEYS */;
 UNLOCK TABLES;
 
--- 
 --
 -- Table structure for table `invGroups`
 --
@@ -914,11 +987,13 @@ LOCK TABLES `invGroups` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invItems`
 --
--- 
 
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `invMarketGroups`
 --
@@ -1020,17 +1095,40 @@ LOCK TABLES `invNames` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invPositions`
 --
--- 
 
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `invTraits`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `invTraits`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `invTraits` (
+  `traitID` int(11) NOT NULL AUTO_INCREMENT,
+  `typeID` int(11) DEFAULT NULL,
+  `skillID` int(11) DEFAULT NULL,
+  `bonus` float DEFAULT NULL,
+  `bonusText` text DEFAULT NULL,
+  `unitID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`traitID`)
+) ENGINE=InnoDB AUTO_INCREMENT=3695 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invTraits`
+--
+
+LOCK TABLES `invTraits` WRITE;
+/*!40000 ALTER TABLE `invTraits` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invTraits` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `invTypeMaterials`
 --
@@ -1056,11 +1154,13 @@ LOCK TABLES `invTypeMaterials` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invTypeReactions`
 --
--- 
 
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `invTypes`
 --
@@ -1128,27 +1228,121 @@ UNLOCK TABLES;
 --
 -- Table structure for table `invVolumes`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `invVolumes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `invVolumes` (
+  `typeID` int(11) NOT NULL,
+  `volume` int(11) DEFAULT NULL,
+  PRIMARY KEY (`typeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invVolumes`
+--
+
+LOCK TABLES `invVolumes` WRITE;
+/*!40000 ALTER TABLE `invVolumes` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invVolumes` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapCelestialGraphics`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapCelestialGraphics`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapCelestialGraphics` (
+  `celestialID` int(11) NOT NULL,
+  `heightMap1` int(11) DEFAULT NULL,
+  `heightMap2` int(11) DEFAULT NULL,
+  `shaderPreset` int(11) DEFAULT NULL,
+  `population` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`celestialID`),
+  CONSTRAINT `CONSTRAINT_1` CHECK (`population` in (0,1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapCelestialGraphics`
+--
+
+LOCK TABLES `mapCelestialGraphics` WRITE;
+/*!40000 ALTER TABLE `mapCelestialGraphics` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapCelestialGraphics` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapCelestialStatistics`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapCelestialStatistics`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapCelestialStatistics` (
+  `celestialID` int(11) NOT NULL,
+  `temperature` double DEFAULT NULL,
+  `spectralClass` varchar(10) DEFAULT NULL,
+  `luminosity` double DEFAULT NULL,
+  `age` double DEFAULT NULL,
+  `life` double DEFAULT NULL,
+  `orbitRadius` double DEFAULT NULL,
+  `eccentricity` double DEFAULT NULL,
+  `massDust` double DEFAULT NULL,
+  `massGas` double DEFAULT NULL,
+  `fragmented` tinyint(1) DEFAULT NULL,
+  `density` double DEFAULT NULL,
+  `surfaceGravity` double DEFAULT NULL,
+  `escapeVelocity` double DEFAULT NULL,
+  `orbitPeriod` double DEFAULT NULL,
+  `rotationRate` double DEFAULT NULL,
+  `locked` tinyint(1) DEFAULT NULL,
+  `pressure` double DEFAULT NULL,
+  `radius` double DEFAULT NULL,
+  `mass` int(11) DEFAULT NULL,
+  PRIMARY KEY (`celestialID`),
+  CONSTRAINT `mapcelestialstats_frag` CHECK (`fragmented` in (0,1)),
+  CONSTRAINT `mapcelestialstats_locked` CHECK (`locked` in (0,1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapCelestialStatistics`
+--
+
+LOCK TABLES `mapCelestialStatistics` WRITE;
+/*!40000 ALTER TABLE `mapCelestialStatistics` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapCelestialStatistics` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapConstellationJumps`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapConstellationJumps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapConstellationJumps` (
+  `fromRegionID` int(11) DEFAULT NULL,
+  `fromConstellationID` int(11) NOT NULL,
+  `toConstellationID` int(11) NOT NULL,
+  `toRegionID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`fromConstellationID`,`toConstellationID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapConstellationJumps`
+--
+
+LOCK TABLES `mapConstellationJumps` WRITE;
+/*!40000 ALTER TABLE `mapConstellationJumps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapConstellationJumps` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapConstellations`
 --
@@ -1231,9 +1425,26 @@ UNLOCK TABLES;
 --
 -- Table structure for table `mapJumps`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapJumps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapJumps` (
+  `stargateID` int(11) NOT NULL,
+  `destinationID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`stargateID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapJumps`
+--
+
+LOCK TABLES `mapJumps` WRITE;
+/*!40000 ALTER TABLE `mapJumps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapJumps` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapLandmarks`
 --
@@ -1264,23 +1475,44 @@ LOCK TABLES `mapLandmarks` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `mapLocationScenes`
 --
--- 
 
--- 
---
--- Table structure for table `mapLocationWormholeClasses`
---
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 
+--
+--
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `mapRegionJumps`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapRegionJumps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapRegionJumps` (
+  `fromRegionID` int(11) NOT NULL,
+  `toRegionID` int(11) NOT NULL,
+  PRIMARY KEY (`fromRegionID`,`toRegionID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapRegionJumps`
+--
+
+LOCK TABLES `mapRegionJumps` WRITE;
+/*!40000 ALTER TABLE `mapRegionJumps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapRegionJumps` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapRegions`
 --
@@ -1319,9 +1551,30 @@ UNLOCK TABLES;
 --
 -- Table structure for table `mapSolarSystemJumps`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapSolarSystemJumps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapSolarSystemJumps` (
+  `fromRegionID` int(11) DEFAULT NULL,
+  `fromConstellationID` int(11) DEFAULT NULL,
+  `fromSolarSystemID` int(11) NOT NULL,
+  `toSolarSystemID` int(11) NOT NULL,
+  `toConstellationID` int(11) DEFAULT NULL,
+  `toRegionID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`fromSolarSystemID`,`toSolarSystemID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapSolarSystemJumps`
+--
+
+LOCK TABLES `mapSolarSystemJumps` WRITE;
+/*!40000 ALTER TABLE `mapSolarSystemJumps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mapSolarSystemJumps` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `mapSolarSystems`
 --
@@ -1382,9 +1635,37 @@ UNLOCK TABLES;
 --
 -- Table structure for table `mapUniverse`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `mapUniverse`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `mapUniverse` (
+  `universeID` int(11) NOT NULL,
+  `universeName` varchar(100) DEFAULT NULL,
+  `x` double DEFAULT NULL,
+  `y` double DEFAULT NULL,
+  `z` double DEFAULT NULL,
+  `xMin` double DEFAULT NULL,
+  `xMax` double DEFAULT NULL,
+  `yMin` double DEFAULT NULL,
+  `yMax` double DEFAULT NULL,
+  `zMin` double DEFAULT NULL,
+  `zMax` double DEFAULT NULL,
+  `radius` double DEFAULT NULL,
+  PRIMARY KEY (`universeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mapUniverse`
+--
+
+LOCK TABLES `mapUniverse` WRITE;
+/*!40000 ALTER TABLE `mapUniverse` DISABLE KEYS */;
+INSERT INTO `mapUniverse` VALUES (9,'',-7.8414612025763e16,4.00068382454404e16,-1.87911133534779e16,-4.49013589606488e17,2.92184365554962e17,-3.13915018760047e16,1.11405178366885e17,-4.33602446107849e17,4.71184672814804e17,4.52393559461327e17),(9000001,'EVE Wormhole Universe',7.70416391716947e18,1.53937198079579e18,-9.51905586204134e18,7.25177035770814e18,8.1565574766308e18,1.08697842133446e18,1.99176554025711e18,9.06666230258001e18,9.97144942150266e18,4.52393559461327e17);
+/*!40000 ALTER TABLE `mapUniverse` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `planetSchematics`
 --
@@ -1459,41 +1740,53 @@ LOCK TABLES `planetSchematicsTypeMap` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `ramActivities`
 --
--- 
 
--- 
---
--- Table structure for table `ramAssemblyLineStations`
---
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 
 --
--- Table structure for table `ramAssemblyLineTypeDetailPerCategory`
 --
--- 
 
--- 
 --
--- Table structure for table `ramAssemblyLineTypeDetailPerGroup`
 --
--- 
 
--- 
---
--- Table structure for table `ramAssemblyLineTypes`
---
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 
 --
--- Table structure for table `ramInstallationTypeContents`
 --
--- 
 
--- 
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `skinLicense`
 --
@@ -1569,33 +1862,117 @@ UNLOCK TABLES;
 --
 -- Table structure for table `skins`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `skins`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `skins` (
+  `skinID` int(11) NOT NULL,
+  `internalName` varchar(70) DEFAULT NULL,
+  `skinMaterialID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`skinID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `skins`
+--
+
+LOCK TABLES `skins` WRITE;
+/*!40000 ALTER TABLE `skins` DISABLE KEYS */;
+/*!40000 ALTER TABLE `skins` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `staOperationServices`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `staOperationServices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `staOperationServices` (
+  `operationID` int(11) NOT NULL,
+  `serviceID` int(11) NOT NULL,
+  PRIMARY KEY (`operationID`,`serviceID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `staOperationServices`
+--
+
+LOCK TABLES `staOperationServices` WRITE;
+/*!40000 ALTER TABLE `staOperationServices` DISABLE KEYS */;
+/*!40000 ALTER TABLE `staOperationServices` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `staOperations`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `staOperations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `staOperations` (
+  `activityID` int(11) DEFAULT NULL,
+  `operationID` int(11) NOT NULL,
+  `operationName` varchar(100) DEFAULT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  `fringe` int(11) DEFAULT NULL,
+  `corridor` int(11) DEFAULT NULL,
+  `hub` int(11) DEFAULT NULL,
+  `border` int(11) DEFAULT NULL,
+  `ratio` int(11) DEFAULT NULL,
+  `caldariStationTypeID` int(11) DEFAULT NULL,
+  `minmatarStationTypeID` int(11) DEFAULT NULL,
+  `amarrStationTypeID` int(11) DEFAULT NULL,
+  `gallenteStationTypeID` int(11) DEFAULT NULL,
+  `joveStationTypeID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`operationID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `staOperations`
+--
+
+LOCK TABLES `staOperations` WRITE;
+/*!40000 ALTER TABLE `staOperations` DISABLE KEYS */;
+/*!40000 ALTER TABLE `staOperations` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `staServices`
 --
--- 
 
--- 
---
--- Table structure for table `staStationTypes`
---
--- 
+DROP TABLE IF EXISTS `staServices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `staServices` (
+  `serviceID` int(11) NOT NULL,
+  `serviceName` varchar(100) DEFAULT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  PRIMARY KEY (`serviceID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 
+--
+-- Dumping data for table `staServices`
+--
+
+LOCK TABLES `staServices` WRITE;
+/*!40000 ALTER TABLE `staServices` DISABLE KEYS */;
+/*!40000 ALTER TABLE `staServices` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
 --
 -- Table structure for table `staStations`
 --
@@ -1644,21 +2021,80 @@ UNLOCK TABLES;
 --
 -- Table structure for table `translationTables`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `translationTables`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `translationTables` (
+  `sourceTable` varchar(200) NOT NULL,
+  `destinationTable` varchar(200) DEFAULT NULL,
+  `translatedKey` varchar(200) NOT NULL,
+  `tcGroupID` int(11) DEFAULT NULL,
+  `tcID` int(11) DEFAULT NULL,
+  PRIMARY KEY (`sourceTable`,`translatedKey`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `translationTables`
+--
+
+LOCK TABLES `translationTables` WRITE;
+/*!40000 ALTER TABLE `translationTables` DISABLE KEYS */;
+/*!40000 ALTER TABLE `translationTables` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `trnTranslationColumns`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `trnTranslationColumns`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `trnTranslationColumns` (
+  `tcGroupID` int(11) DEFAULT NULL,
+  `tcID` int(11) NOT NULL,
+  `tableName` varchar(256) NOT NULL,
+  `columnName` varchar(128) NOT NULL,
+  `masterID` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`tcID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `trnTranslationColumns`
+--
+
+LOCK TABLES `trnTranslationColumns` WRITE;
+/*!40000 ALTER TABLE `trnTranslationColumns` DISABLE KEYS */;
+INSERT INTO `trnTranslationColumns` VALUES (4,6,'dbo.invCategories','categoryName','categoryID'),(5,7,'dbo.invGroups','groupName','groupID'),(5,8,'dbo.invTypes','typeName','typeID'),(5,33,'dbo.invTypes','description','typeID'),(6,34,'dbo.invMetaGroups','metaGroupName','metaGroupID'),(6,35,'dbo.invMetaGroups','description','metaGroupID'),(28,36,'dbo.invMarketGroups','marketGroupName','marketGroupID'),(28,37,'dbo.invMarketGroups','description','marketGroupID'),(85,40,'dbo.mapSolarSystems','solarSystemName','solarSystemID'),(86,41,'dbo.mapConstellations','constellationName','constellationID'),(87,42,'dbo.mapRegions','regionName','regionID'),(34,46,'dbo.staOperations','operationName','operationID'),(34,47,'dbo.staOperations','description','operationID'),(35,48,'dbo.staServices','serviceName','serviceID'),(35,49,'dbo.staServices','description','serviceID'),(41,58,'dbo.eveUnits','displayName','unitID'),(42,59,'dbo.dgmAttributeTypes','displayName','attributeID'),(46,63,'dbo.mapLandmarks','landmarkName','landmarkID'),(46,64,'dbo.mapLandmarks','description','landmarkID'),(47,65,'dbo.crpNPCDivisions','divisionName','divisionID'),(47,66,'dbo.crpNPCDivisions','leaderType','divisionID'),(53,74,'dbo.dgmEffects','displayName','effectID'),(53,75,'dbo.dgmEffects','description','effectID'),(84,119,'dbo.planetSchematics','schematicName','schematicID'),(41,122,'dbo.eveUnits','description','unitID'),(64,138,'dbo.crpNPCCorporations','description','corporationID');
+/*!40000 ALTER TABLE `trnTranslationColumns` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `trnTranslationLanguages`
 --
--- 
 
--- 
+DROP TABLE IF EXISTS `trnTranslationLanguages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `trnTranslationLanguages` (
+  `numericLanguageID` int(11) NOT NULL,
+  `languageID` varchar(50) DEFAULT NULL,
+  `languageName` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`numericLanguageID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `trnTranslationLanguages`
+--
+
+LOCK TABLES `trnTranslationLanguages` WRITE;
+/*!40000 ALTER TABLE `trnTranslationLanguages` DISABLE KEYS */;
+/*!40000 ALTER TABLE `trnTranslationLanguages` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `trnTranslations`
 --
@@ -1685,25 +2121,29 @@ LOCK TABLES `trnTranslations` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `warCombatZoneSystems`
 --
--- 
 
--- 
---
--- Table structure for table `warCombatZones`
---
--- 
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
--- 
--- /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
--- /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
--- /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
--- /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
--- /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
--- /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
--- /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
--- 
+--
+--
+
+--
+--
+
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+--
+
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
 -- Dump completed on 2025-07-07 17:47:07
--- 
