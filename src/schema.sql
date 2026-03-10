@@ -196,6 +196,12 @@ LOCK TABLES `certSkills` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `charFactions`
+--
+-- 
+
+-- 
+--
 -- Table structure for table `chrAncestries`
 --
 
@@ -325,6 +331,32 @@ LOCK TABLES `chrFactions` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `chrRaces`
+--
+
+DROP TABLE IF EXISTS `chrRaces`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `chrRaces` (
+  `raceID` int(11) NOT NULL,
+  `raceName` varchar(100) DEFAULT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  `iconID` int(11) DEFAULT NULL,
+  `shortDescription` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`raceID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chrRaces`
+--
+
+LOCK TABLES `chrRaces` WRITE;
+/*!40000 ALTER TABLE `chrRaces` DISABLE KEYS */;
+/*!40000 ALTER TABLE `chrRaces` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `crpActivities`
 --
 
@@ -348,6 +380,24 @@ LOCK TABLES `crpActivities` WRITE;
 /*!40000 ALTER TABLE `crpActivities` ENABLE KEYS */;
 UNLOCK TABLES;
 
+--
+-- Table structure for table `crpNPCCorporationDivisions`
+--
+-- 
+
+-- 
+--
+-- Table structure for table `crpNPCCorporationResearchFields`
+--
+-- 
+
+-- 
+--
+-- Table structure for table `crpNPCCorporationTrades`
+--
+-- 
+
+-- 
 --
 -- Table structure for table `crpNPCCorporations`
 --
@@ -540,13 +590,11 @@ LOCK TABLES `dgmEffects` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `dgmExpressions`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
+-- 
 --
 -- Table structure for table `dgmTypeAttributes`
 --
@@ -1475,21 +1523,17 @@ LOCK TABLES `mapLandmarks` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `mapLocationScenes`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
+-- 
+--
+-- Table structure for table `mapLocationWormholeClasses`
+--
+-- 
 
---
---
-
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
+-- 
 --
 -- Table structure for table `mapRegionJumps`
 --
@@ -1740,53 +1784,41 @@ LOCK TABLES `planetSchematicsTypeMap` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `ramActivities`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
+-- 
+--
+-- Table structure for table `ramAssemblyLineStations`
+--
+-- 
 
+-- 
 --
+-- Table structure for table `ramAssemblyLineTypeDetailPerCategory`
 --
+-- 
 
+-- 
 --
+-- Table structure for table `ramAssemblyLineTypeDetailPerGroup`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
+-- 
+--
+-- Table structure for table `ramAssemblyLineTypes`
+--
+-- 
 
+-- 
 --
+-- Table structure for table `ramInstallationTypeContents`
 --
+-- 
 
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
+-- 
 --
 -- Table structure for table `skinLicense`
 --
@@ -1966,13 +1998,11 @@ LOCK TABLES `staServices` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `staStationTypes`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
+-- 
 --
 -- Table structure for table `staStations`
 --
@@ -2121,29 +2151,24 @@ LOCK TABLES `trnTranslations` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `warCombatZoneSystems`
 --
+-- 
 
-/*!40101 SET character_set_client = @saved_cs_client */;
-
+-- 
 --
+-- Table structure for table `warCombatZones`
 --
+-- 
 
---
---
-
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
---
-
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
+-- /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+-- 
+-- /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+-- /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+-- /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+-- /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+-- /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+-- /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+-- 
 -- Dump completed on 2025-07-07 17:47:07
