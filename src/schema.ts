@@ -1226,7 +1226,7 @@ export function generateRedshiftDdl(): string {
  *  (e.g. `CREATE DATABASE ... CHARACTER SET AL32UTF8`) to support full Unicode. */
 export function generateOracleDdl(): string {
   // version is required by knex's Oracle dialect to compute identifier length limits
-  const k = knex({ client: 'oracledb', version: '12.0' });
+  const k = knex({ client: 'oracledb', version: '12.2' });
   const parts: string[] = [
     '-- Oracle 12c DDL',
     '-- Ensure the target database was created with: CHARACTER SET AL32UTF8',

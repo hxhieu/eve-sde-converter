@@ -21,7 +21,7 @@ const AdmZip = require('adm-zip');
 const knexMysql = knex({ client: 'mysql2' });
 const knexPg = knex({ client: 'pg' });
 const knexMssql = knex({ client: 'mssql' });
-const knexOracle = knex({ client: 'oracledb', version: '12.0' });
+const knexOracle = knex({ client: 'oracledb', version: '12.2' });
 
 function getProxyAgent() {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
