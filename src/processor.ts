@@ -8,8 +8,6 @@ import {
   generatePgsqlDdl,
   generateSqliteDdl,
   generateMssqlDdl,
-  generateCockroachDbDdl,
-  generateRedshiftDdl,
   generateOracleDdl,
   tableOrder,
   invFlagsData,
@@ -288,12 +286,19 @@ function extractRawValues(
 }
 
 /** Convert InsertRow array to plain key-value objects for knex insert. */
-function insertRowsToObjects(rows: InsertRow[]): Record<string, any>[] {
+function insertRowsToObjects(rows: InsertRow[], coerceBoolToInt = false): Record<string, any>[] {
   return rows.map(row => {
     const obj: Record<string, any> = {};
     for (let i = 0; i < row.columns.length; i++) {
+      const col = row.columns[i];
       const v = row.values[i];
-      obj[row.columns[i]] = v === undefined ? null : v;
+      if (v === undefined) {
+        obj[col] = null;
+      } else if (coerceBoolToInt && typeof v === 'boolean') {
+        obj[col] = v ? 1 : 0;
+      } else {
+        obj[col] = v;
+      }
     }
     return obj;
   });
@@ -376,11 +381,12 @@ export function processTable(tableName: string, unzippedDir: string): InsertRow[
         }
       }
     }
-    // Now deduplicate by itemName (case-insensitive, matching MySQL utf8_general_ci),
-    // keeping the one with smallest groupID
+    // Now deduplicate by itemName (case-insensitive, NFC-normalised).
+    // NFC normalisation ensures composed/decomposed Unicode forms are treated
+    // as equal, matching SQL Server's CI_AS_SC collation behaviour.
     const uniqueByName = new Map<string, {itemID: number, itemName: string, groupID: number}>();
     for (const entry of uniqueByID.values()) {
-      const nameKey = entry.itemName.toLowerCase();
+      const nameKey = entry.itemName.normalize('NFC').toLowerCase();
       if (uniqueByName.has(nameKey)) {
         const existing = uniqueByName.get(nameKey)!;
         if (entry.groupID < existing.groupID) {
@@ -971,13 +977,16 @@ export function generateMssqlDump(
   const output: string[] = [generateMssqlDdl(), '-- Data', ''];
 
   if (!tableName) {
-    output.push(...getStaticInserts(knexMssql));
+    for (const insert of getStaticInserts(knexMssql)) {
+      output.push(insert);
+      output.push('GO');
+    }
     output.push('');
   } else if (staticDataTables.has(tableName)) {
     const k = knexMssql;
-    if (tableName === 'invFlags') output.push(k('invFlags').insert(invFlagsData).toString() + ';');
-    if (tableName === 'mapUniverse') output.push(k('mapUniverse').insert(mapUniverseData).toString() + ';');
-    if (tableName === 'trnTranslationColumns') output.push(k('trnTranslationColumns').insert(trnTranslationColumnsData).toString() + ';');
+    if (tableName === 'invFlags') { output.push(k('invFlags').insert(invFlagsData).toString() + ';'); output.push('GO'); }
+    if (tableName === 'mapUniverse') { output.push(k('mapUniverse').insert(mapUniverseData).toString() + ';'); output.push('GO'); }
+    if (tableName === 'trnTranslationColumns') { output.push(k('trnTranslationColumns').insert(trnTranslationColumnsData).toString() + ';'); output.push('GO'); }
     output.push('');
   }
 
@@ -1002,10 +1011,11 @@ export function generateMssqlDump(
           if (identityTables.has(table)) {
             output.push(`SET IDENTITY_INSERT [${table}] ON;`);
           }
-          output.push(knexMssql(table).insert(insertRowsToObjects(batch)).toString() + ';');
+          output.push(knexMssql(table).insert(insertRowsToObjects(batch, true)).toString() + ';');
           if (identityTables.has(table)) {
             output.push(`SET IDENTITY_INSERT [${table}] OFF;`);
           }
+          output.push('GO');
         }
       }
     } catch (e: any) {
@@ -1016,108 +1026,99 @@ export function generateMssqlDump(
   fs.writeFileSync(outputPath, output.join('\n'));
 }
 
+// ---------------------------------------------------------------------------
+// Oracle INSERT helpers
+// ---------------------------------------------------------------------------
+
+/** Maximum char length per Oracle string literal in SQL context (< 4000). */
+const ORACLE_CHUNK_SIZE = 3900;
+/** SQL*Plus hard line-length limit is 4999; stay safely under it. */
+const ORACLE_MAX_LINE = 4900;
+
 /**
- * Generate CockroachDB dump directly from JSONL data.
- * CockroachDB is PostgreSQL-wire-compatible; INSERT syntax is identical to PostgreSQL.
+ * Break a JavaScript string value into Oracle SQL expression fragments.
+ * Newlines become CHR(10)/CHR(13) expressions; long chunks are split so
+ * each quoted literal fits within ORACLE_CHUNK_SIZE.
+ * The fragments are intended to be joined with ' || '.
  */
-export function generateCockroachDbDump(
-  unzippedDir: string,
-  outputPath: string,
-  tableName?: string,
-): void {
-  celestialNameCache = buildNameCache(unzippedDir);
-
-  const output: string[] = [generateCockroachDbDdl(), '-- Data', ''];
-
-  if (!tableName) {
-    output.push(...getStaticInserts(knexPg));
-    output.push('');
-  } else if (staticDataTables.has(tableName)) {
-    const k = knexPg;
-    if (tableName === 'invFlags') output.push(k('invFlags').insert(invFlagsData).toString() + ';');
-    if (tableName === 'mapUniverse') output.push(k('mapUniverse').insert(mapUniverseData).toString() + ';');
-    if (tableName === 'trnTranslationColumns') output.push(k('trnTranslationColumns').insert(trnTranslationColumnsData).toString() + ';');
-    output.push('');
-  }
-
-  for (const currentTableName of tableOrder) {
-    if (!tableMappings[currentTableName]) continue;
-    if (tableName && currentTableName !== tableName) continue;
-    try {
-      const rows = processTable(currentTableName, unzippedDir);
-      if (rows.length === 0) continue;
-      const groups = new Map<string, InsertRow[]>();
-      for (const row of rows) {
-        const key = `${row.table}\0${row.columns.join('\0')}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(row);
+function oracleStringFragments(s: string): string[] {
+  const fragments: string[] = [];
+  // Split on any CR/LF sequences (capturing them so we can emit CHR calls).
+  const parts = s.split(/([\r\n]+)/);
+  for (const part of parts) {
+    if (part === '') continue;
+    if (/^[\r\n]+$/.test(part)) {
+      for (const ch of part) {
+        if (ch === '\r') fragments.push('CHR(13)');
+        else fragments.push('CHR(10)');
       }
-      for (const group of groups.values()) {
-        const { table } = group[0];
-        const BATCH = 500;
-        for (let i = 0; i < group.length; i += BATCH) {
-          const batch = group.slice(i, i + BATCH);
-          output.push(knexPg(table).insert(insertRowsToObjects(batch)).toString() + ';');
-        }
+    } else {
+      const escaped = part.replace(/'/g, "''");
+      for (let i = 0; i < escaped.length; i += ORACLE_CHUNK_SIZE) {
+        fragments.push(`'${escaped.slice(i, i + ORACLE_CHUNK_SIZE)}'`);
       }
-    } catch (e: any) {
-      console.warn(`Skipping ${currentTableName}: ${e.message}`);
     }
   }
+  return fragments.length === 0 ? ["''"] : fragments;
+}
 
-  fs.writeFileSync(outputPath, output.join('\n'));
+/** Convert a single row value to its Oracle SQL expression fragment(s). */
+function oracleValueFragments(v: unknown): string[] {
+  if (v === null || v === undefined) return ['NULL'];
+  if (typeof v === 'boolean') return [v ? '1' : '0'];
+  if (typeof v === 'number') return [String(v)];
+  if (typeof v === 'string') return oracleStringFragments(v);
+  return [`'${String(v).replace(/'/g, "''")}'`];
 }
 
 /**
- * Generate Amazon Redshift dump directly from JSONL data.
- * Redshift is PostgreSQL-based; INSERT syntax is compatible with PostgreSQL.
+ * Build a single Oracle INSERT statement for one row.
+ * Lines are wrapped before exceeding ORACLE_MAX_LINE characters so that
+ * SQL*Plus (which rejects lines > 4999 chars) can execute the file.
+ * All embedded newlines in string data are replaced with CHR() expressions
+ * so no physical newline in the output file is part of a string literal.
  */
-export function generateRedshiftDump(
-  unzippedDir: string,
-  outputPath: string,
-  tableName?: string,
-): void {
-  celestialNameCache = buildNameCache(unzippedDir);
+function buildOracleInsert(tableName: string, row: Record<string, any>): string {
+  const cols = Object.keys(row);
+  const header = `insert into "${tableName}" (${cols.map(c => `"${c}"`).join(', ')}) values (`;
 
-  const output: string[] = [generateRedshiftDdl(), '-- Data', ''];
+  let output = '';
+  let lineLen = 0;
 
-  if (!tableName) {
-    output.push(...getStaticInserts(knexPg));
-    output.push('');
-  } else if (staticDataTables.has(tableName)) {
-    const k = knexPg;
-    if (tableName === 'invFlags') output.push(k('invFlags').insert(invFlagsData).toString() + ';');
-    if (tableName === 'mapUniverse') output.push(k('mapUniverse').insert(mapUniverseData).toString() + ';');
-    if (tableName === 'trnTranslationColumns') output.push(k('trnTranslationColumns').insert(trnTranslationColumnsData).toString() + ';');
-    output.push('');
-  }
+  const emit = (text: string) => {
+    output += text;
+    lineLen += text.length;
+  };
 
-  for (const currentTableName of tableOrder) {
-    if (!tableMappings[currentTableName]) continue;
-    if (tableName && currentTableName !== tableName) continue;
-    try {
-      const rows = processTable(currentTableName, unzippedDir);
-      if (rows.length === 0) continue;
-      const groups = new Map<string, InsertRow[]>();
-      for (const row of rows) {
-        const key = `${row.table}\0${row.columns.join('\0')}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(row);
+  // Append `text`, breaking to a new line first if adding it would exceed the
+  // per-line limit.  The new line inherits no leading padding so that SQL*Plus
+  // sees a valid continuation (operators / commas may start a line in Oracle SQL).
+  const appendWithWrap = (text: string) => {
+    if (lineLen > 0 && lineLen + text.length > ORACLE_MAX_LINE) {
+      output += '\n';
+      lineLen = 0;
+    }
+    emit(text);
+  };
+
+  emit(header);
+
+  for (let i = 0; i < cols.length; i++) {
+    const frags = oracleValueFragments(row[cols[i]]);
+    for (let j = 0; j < frags.length; j++) {
+      const frag = frags[j];
+      if (i === 0 && j === 0) {
+        appendWithWrap(frag);
+      } else if (j === 0) {
+        appendWithWrap(', ' + frag);
+      } else {
+        appendWithWrap(' || ' + frag);
       }
-      for (const group of groups.values()) {
-        const { table } = group[0];
-        const BATCH = 500;
-        for (let i = 0; i < group.length; i += BATCH) {
-          const batch = group.slice(i, i + BATCH);
-          output.push(knexPg(table).insert(insertRowsToObjects(batch)).toString() + ';');
-        }
-      }
-    } catch (e: any) {
-      console.warn(`Skipping ${currentTableName}: ${e.message}`);
     }
   }
 
-  fs.writeFileSync(outputPath, output.join('\n'));
+  appendWithWrap(');');
+  return output;
 }
 
 /**
@@ -1131,46 +1132,83 @@ export function generateOracleDump(
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
-  const output: string[] = [generateOracleDdl(), '-- Data', ''];
+  // Write to a temp file first so that a failed run never leaves a partial/corrupt
+  // file at outputPath. Rename into place only after successful completion.
+  const tmpPath = outputPath + '.tmp';
+  const fd = fs.openSync(tmpPath, 'w');
 
-  if (!tableName) {
-    // Static data: emit one INSERT per row for Oracle compatibility
-    for (const row of invFlagsData) {
-      output.push(knexOracle('invFlags').insert(row).toString() + ';');
-    }
-    for (const row of mapUniverseData) {
-      output.push(knexOracle('mapUniverse').insert(row).toString() + ';');
-    }
-    for (const row of trnTranslationColumnsData) {
-      output.push(knexOracle('trnTranslationColumns').insert(row).toString() + ';');
-    }
-    output.push('');
-  } else if (staticDataTables.has(tableName)) {
-    const dataset =
-      tableName === 'invFlags' ? invFlagsData :
-      tableName === 'mapUniverse' ? mapUniverseData :
-      trnTranslationColumnsData;
-    for (const row of dataset) {
-      output.push(knexOracle(tableName).insert(row).toString() + ';');
-    }
-    output.push('');
-  }
+  // Buffer writes up to 64 KB before flushing to reduce per-row syscall overhead.
+  // The flush helper loops until all bytes are written to guard against short writes.
+  const FLUSH_THRESHOLD = 64 * 1024;
+  let buf = '';
 
-  for (const currentTableName of tableOrder) {
-    if (!tableMappings[currentTableName]) continue;
-    if (tableName && currentTableName !== tableName) continue;
-    try {
-      const rows = processTable(currentTableName, unzippedDir);
-      if (rows.length === 0) continue;
-      for (const row of insertRowsToObjects(rows)) {
-        output.push(knexOracle(currentTableName).insert(row).toString() + ';');
+  const flush = () => {
+    if (buf.length === 0) return;
+    const data = Buffer.from(buf, 'utf8');
+    let offset = 0;
+    while (offset < data.length) {
+      const written = fs.writeSync(fd, data, offset, data.length - offset);
+      if (written === 0) throw new Error('Oracle dump: fs.writeSync wrote 0 bytes');
+      offset += written;
+    }
+    buf = '';
+  };
+
+  const writeLine = (line: string) => {
+    buf += line + '\n';
+    if (buf.length >= FLUSH_THRESHOLD) flush();
+  };
+
+  try {
+    writeLine(generateOracleDdl());
+    writeLine('-- Data');
+    writeLine('');
+
+    if (!tableName) {
+      // Static data: emit one INSERT per row for Oracle compatibility
+      for (const row of invFlagsData) {
+        writeLine(buildOracleInsert('invFlags', row));
       }
-    } catch (e: any) {
-      console.warn(`Skipping ${currentTableName}: ${e.message}`);
+      for (const row of mapUniverseData) {
+        writeLine(buildOracleInsert('mapUniverse', row));
+      }
+      for (const row of trnTranslationColumnsData) {
+        writeLine(buildOracleInsert('trnTranslationColumns', row));
+      }
+      writeLine('');
+    } else if (staticDataTables.has(tableName)) {
+      const dataset =
+        tableName === 'invFlags' ? invFlagsData :
+        tableName === 'mapUniverse' ? mapUniverseData :
+        trnTranslationColumnsData;
+      for (const row of dataset) {
+        writeLine(buildOracleInsert(tableName, row));
+      }
+      writeLine('');
     }
-  }
 
-  fs.writeFileSync(outputPath, output.join('\n'));
+    for (const currentTableName of tableOrder) {
+      if (!tableMappings[currentTableName]) continue;
+      if (tableName && currentTableName !== tableName) continue;
+      try {
+        const rows = processTable(currentTableName, unzippedDir);
+        if (rows.length === 0) continue;
+        for (const row of insertRowsToObjects(rows)) {
+          writeLine(buildOracleInsert(currentTableName, row));
+        }
+      } catch (e: any) {
+        console.warn(`Skipping ${currentTableName}: ${e.message}`);
+      }
+    }
+
+    flush();
+    fs.closeSync(fd);
+    fs.renameSync(tmpPath, outputPath);
+  } catch (e) {
+    try { fs.closeSync(fd); } catch { /* ignore close error during error path */ }
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup error */ }
+    throw e;
+  }
 }
 
 export const tableMappings: Record<string, { files: string[]; fields: Array<string | { name: string; transform: (item: any, subItem?: any, fileName?: string) => any }>; expand?: string; filter?: (item: any) => boolean }> = {
@@ -1936,7 +1974,7 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       { name: 'heightMap1', transform: (item: any) => item.attributes?.heightMap1 ?? null },
       { name: 'heightMap2', transform: (item: any) => item.attributes?.heightMap2 ?? null },
       { name: 'shaderPreset', transform: (item: any) => item.attributes?.shaderPreset ?? null },
-      { name: 'population', transform: (item: any) => item.attributes?.population != null ? (item.attributes.population ? 1 : 0) : null }
+      { name: 'population', transform: (item: any) => item.attributes?.population != null ? Boolean(item.attributes.population) : null }
     ],
     filter: (item: any) => item.attributes != null
   },

@@ -420,7 +420,7 @@ CREATE TABLE `crpNPCCorporations` (
   `investorShares4` int(11) DEFAULT NULL,
   `friendID` int(11) DEFAULT NULL,
   `enemyID` int(11) DEFAULT NULL,
-  `publicShares` int(11) DEFAULT NULL,
+  `publicShares` bigint DEFAULT NULL,
   `initialPrice` int(11) DEFAULT NULL,
   `minSecurity` float DEFAULT NULL,
   `scattered` tinyint(1) DEFAULT NULL,
@@ -605,7 +605,7 @@ DROP TABLE IF EXISTS `dgmTypeAttributes`;
 CREATE TABLE `dgmTypeAttributes` (
   `typeID` int(11) NOT NULL,
   `attributeID` int(11) NOT NULL,
-  `valueInt` int(11) DEFAULT NULL,
+  `valueInt` bigint DEFAULT NULL,
   `valueFloat` float DEFAULT NULL,
   PRIMARY KEY (`typeID`,`attributeID`),
   KEY `ix_dgmTypeAttributes_attributeID` (`attributeID`)
@@ -1282,7 +1282,7 @@ DROP TABLE IF EXISTS `invVolumes`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `invVolumes` (
   `typeID` int(11) NOT NULL,
-  `volume` int(11) DEFAULT NULL,
+  `volume` bigint DEFAULT NULL,
   PRIMARY KEY (`typeID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1949,7 +1949,7 @@ CREATE TABLE `staOperations` (
   `activityID` int(11) DEFAULT NULL,
   `operationID` int(11) NOT NULL,
   `operationName` varchar(100) DEFAULT NULL,
-  `description` varchar(1000) DEFAULT NULL,
+  `description` text DEFAULT NULL,
   `fringe` int(11) DEFAULT NULL,
   `corridor` int(11) DEFAULT NULL,
   `hub` int(11) DEFAULT NULL,
@@ -1983,7 +1983,7 @@ DROP TABLE IF EXISTS `staServices`;
 CREATE TABLE `staServices` (
   `serviceID` int(11) NOT NULL,
   `serviceName` varchar(100) DEFAULT NULL,
-  `description` varchar(1000) DEFAULT NULL,
+  `description` text DEFAULT NULL,
   PRIMARY KEY (`serviceID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
