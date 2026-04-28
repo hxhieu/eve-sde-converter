@@ -1538,6 +1538,9 @@ export function processTable(tableName: string, unzippedDir: string, hoboleaksDi
         if (mapping.expand && Array.isArray(item[mapping.expand])) {
           // Expand array into multiple rows
           for (const subItem of item[mapping.expand]) {
+            if (mapping.filter && !mapping.filter(item, subItem)) {
+              continue;
+            }
             const values: SqlValue[] = mapping.fields.map((field: any) => {
               let value: SqlValue;
               if (typeof field === 'string') {
@@ -1557,6 +1560,8 @@ export function processTable(tableName: string, unzippedDir: string, hoboleaksDi
             if (materialTypeIDIndex !== -1 && values[materialTypeIDIndex] == null) continue;
             rows.push({ table: tableName, columns, values });
           }
+        } else if (mapping.expand) {
+          continue;
         } else {
           const values = extractRawValues(item, mapping, fileName);
           if (materialTypeIDIndex !== -1 && values[materialTypeIDIndex] == null) continue;
@@ -1969,7 +1974,7 @@ export function generateOracleDump(
   }
 }
 
-export const tableMappings: Record<string, { files: string[]; fields: Array<string | { name: string; transform: (item: any, subItem?: any, fileName?: string) => any }>; expand?: string; filter?: (item: any) => boolean }> = {
+export const tableMappings: Record<string, { files: string[]; fields: Array<string | { name: string; transform: (item: any, subItem?: any, fileName?: string) => any }>; expand?: string; filter?: (item: any, subItem?: any) => boolean }> = {
   'agtAgents': {
     files: ['npcCharacters.jsonl'],
     fields: [
@@ -2580,6 +2585,15 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       { name: 'description', transform: (item) => item.description?.en || null },
       { name: 'iconID', transform: (item) => null }
     ]
+  },
+  'crpNPCCorporationTrades': {
+    files: ['npcCorporations.jsonl'],
+    fields: [
+      { name: 'corporationID', transform: (item) => item._key },
+      { name: 'typeID', transform: (_item, subItem) => subItem?._key ?? subItem?.typeID ?? (typeof subItem === 'number' ? subItem : null) }
+    ],
+    expand: 'corporationTrades',
+    filter: (_item, subItem) => subItem === undefined || (subItem?._key ?? subItem?.typeID ?? (typeof subItem === 'number' ? subItem : null)) != null
   },
   'skinLicense': {
     files: ['skinLicenses.jsonl'],

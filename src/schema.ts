@@ -744,6 +744,13 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     if (isMysql) table.check('?? in (0,1)', ['scattered'], 'cnpcc_scatt');
   },
 
+  crpNPCCorporationTrades: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('corporationID').notNullable();
+    table.integer('typeID').notNullable();
+    table.primary(['corporationID', 'typeID']);
+  },
+
   crpNPCDivisions: (table, isMysql) => {
     if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
     table.integer('divisionID').notNullable().primary();
@@ -1437,7 +1444,7 @@ export const tableOrder: string[] = [
   'skillPlans', 'skillPlanMilestones', 'skillPlanSkillRequirements',
   'skinMaterialNames', 'stationStandingRestrictionServices',
   'typeMaterials', 'typeRandomizedMaterials',
-  'crpActivities', 'crpNPCCorporations', 'crpNPCDivisions',
+  'crpActivities', 'crpNPCCorporations', 'crpNPCCorporationTrades', 'crpNPCDivisions',
   'dgmAttributeCategories', 'dgmAttributeTypes', 'dgmEffects', 'dgmTypeAttributes', 'dgmTypeEffects',
   'eveGraphics', 'eveIcons', 'eveUnits',
   'industryActivity', 'industryActivityMaterials', 'industryActivityProbabilities',
