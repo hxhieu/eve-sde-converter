@@ -4,8 +4,9 @@ A CLI tool built with TypeScript to convert EVE Online Static Data Export (SDE) 
 
 ## Features
 
-- Fetches the latest EVE Online SDE build number from the official API
-- Downloads and extracts the JSONL data archive
+- Downloads the latest mirrored CCP JSONL SDE archive from EVE Ref
+- Downloads the latest Hoboleaks SDE archive from EVE Ref
+- Validates required Hoboleaks file revisions against the CCP SDE build number
 - Processes JSONL files and maps data to MySQL schema
 - Generates MySQL dump files
 - Converts MySQL dump to SQLite format using the included mysql2sqlite utility
@@ -41,22 +42,33 @@ pnpm run build
 Run the converter:
 
 ```bash
-pnpm run start
+pnpm run start -- convert
 ```
 
 Or directly with Node.js:
 
 ```bash
-node dist/index.js
+node dist/index.js convert
 ```
 
 The tool will:
 
-1. Check for the latest SDE build number
-2. Skip processing if the build is already tagged (in GitHub Actions)
-3. Download and extract the JSONL archive
-4. Process each JSONL file and generate MySQL dump
-5. Convert the MySQL dump to SQLite format
+1. Download and extract the latest EVE Ref CCP JSONL SDE archive
+2. Download and extract the latest EVE Ref Hoboleaks SDE archive
+3. Read the CCP SDE build number from `_sde.jsonl`
+4. Validate required Hoboleaks file revisions against that build number
+5. Process the requested tables and generate SQL dump output
+6. Convert the MySQL dump to SQLite format when `sqlite` is selected
+
+Useful local-source options:
+
+```bash
+node dist/index.js convert \
+  --unzipped-dir /path/to/extracted/jsonl \
+  --hoboleaks-dir /path/to/extracted/hoboleaks \
+  --dialects sqlite \
+  --output-dir /tmp/eve-sde-output
+```
 
 ## Output
 

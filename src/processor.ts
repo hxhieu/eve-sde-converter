@@ -20,6 +20,8 @@ const knexMysql = knex({ client: 'mysql2' });
 const knexPg = knex({ client: 'pg' });
 const knexMssql = knex({ client: 'mssql' });
 const knexOracle = knex({ client: 'oracledb', version: '12.2' });
+const EVE_REF_SDE_URL = 'https://data.everef.net/ccp/sde/eve-online-static-data-latest-jsonl.zip';
+const EVE_REF_HOBOLEAKS_URL = 'https://data.everef.net/hoboleaks-sde/hoboleaks-sde-latest.tar.xz';
 
 function getProxyAgent() {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
@@ -104,6 +106,18 @@ export async function getChangeSummary(buildNumber: number): Promise<string> {
 
 export async function downloadZip(buildNumber: number, outputPath: string): Promise<void> {
   const url = `https://developers.eveonline.com/static-data/tranquility/eve-online-static-data-${buildNumber}-jsonl.zip`;
+  await downloadFile(url, outputPath);
+}
+
+export async function downloadLatestSdeZip(outputPath: string): Promise<void> {
+  await downloadFile(EVE_REF_SDE_URL, outputPath);
+}
+
+export async function downloadLatestHoboleaksTar(outputPath: string): Promise<void> {
+  await downloadFile(EVE_REF_HOBOLEAKS_URL, outputPath);
+}
+
+async function downloadFile(url: string, outputPath: string): Promise<void> {
   try {
     const response = await fetch(url, {
       dispatcher: getProxyAgent() as any
@@ -122,6 +136,53 @@ export async function downloadZip(buildNumber: number, outputPath: string): Prom
 export function unzipFile(zipPath: string, outputDir: string): void {
   const zip = new AdmZip(zipPath);
   zip.extractAllTo(outputDir, true);
+}
+
+export function extractTarXz(tarPath: string, outputDir: string): void {
+  fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+  execSync(`tar -xJf "${tarPath}" -C "${outputDir}"`, { stdio: 'inherit' });
+}
+
+export function getSdeBuildNumber(unzippedDir: string): number {
+  const sdePath = path.join(unzippedDir, '_sde.jsonl');
+  if (!fs.existsSync(sdePath)) {
+    throw new Error(`Missing SDE metadata file: ${sdePath}`);
+  }
+
+  for (const item of readJsonl(sdePath)) {
+    if (item.buildNumber != null) {
+      return item.buildNumber;
+    }
+  }
+
+  throw new Error(`Could not read buildNumber from ${sdePath}`);
+}
+
+export function validateHoboleaksRevision(hoboleaksDir: string, sdeBuildNumber: number): void {
+  const metaPath = path.join(hoboleaksDir, 'meta.json');
+  if (!fs.existsSync(metaPath)) {
+    throw new Error(`Missing Hoboleaks metadata file: ${metaPath}`);
+  }
+
+  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+  const files = meta.files ?? {};
+  const requiredFiles = ['schools.json', 'schoolmap.json', 'skillplans.json'];
+  for (const fileName of requiredFiles) {
+    const fileMeta = files[fileName];
+    const filePath = path.join(hoboleaksDir, fileName);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Missing Hoboleaks required file: ${filePath}`);
+    }
+
+    if (fileMeta?.revision !== sdeBuildNumber) {
+      throw new Error(`Hoboleaks ${fileName} revision ${fileMeta?.revision ?? 'unknown'} does not match SDE build ${sdeBuildNumber}`);
+    }
+  }
+}
+
+function readJsonFile(filePath: string): any {
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 }
 
 export function* readJsonl(filePath: string): Generator<any> {
@@ -354,7 +415,7 @@ export function serializeInsertRows(
   return result;
 }
 
-export function processTable(tableName: string, unzippedDir: string): InsertRow[] {
+export function processTable(tableName: string, unzippedDir: string, hoboleaksDir?: string): InsertRow[] {
   const mapping = tableMappings[tableName];
   if (!mapping) {
     throw new Error(`No mapping for ${tableName}`);
@@ -551,6 +612,78 @@ export function processTable(tableName: string, unzippedDir: string): InsertRow[
       }
     }
 
+    return rows;
+  } else if (tableName === 'chrSchools') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for chrSchools');
+    }
+    const schoolsPath = path.join(hoboleaksDir, 'schools.json');
+    if (!fs.existsSync(schoolsPath)) {
+      throw new Error(`Missing Hoboleaks schools file: ${schoolsPath}`);
+    }
+
+    const schools = readJsonFile(schoolsPath);
+    const rows: InsertRow[] = [];
+    const columns = ['schoolID', 'corporationID', 'careerID', 'raceID', 'title', 'description', 'characterDescription', 'iconID'];
+    for (const [key, school] of Object.entries<any>(schools)) {
+      rows.push({
+        table: 'chrSchools',
+        columns,
+        values: [
+          Number(key),
+          school.corporationID ?? null,
+          school.careerID ?? null,
+          school.raceID ?? null,
+          school.title ?? null,
+          school.description ?? null,
+          school.characterDescription ?? null,
+          school.iconID ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'chrSchoolStartingStations') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for chrSchoolStartingStations');
+    }
+    const schoolsPath = path.join(hoboleaksDir, 'schools.json');
+    if (!fs.existsSync(schoolsPath)) {
+      throw new Error(`Missing Hoboleaks schools file: ${schoolsPath}`);
+    }
+
+    const schools = readJsonFile(schoolsPath);
+    const rows: InsertRow[] = [];
+    const columns = ['schoolID', 'stationID', 'sortOrder'];
+    for (const [key, school] of Object.entries<any>(schools)) {
+      if (!Array.isArray(school.startingStations)) continue;
+      for (let i = 0; i < school.startingStations.length; i++) {
+        rows.push({
+          table: 'chrSchoolStartingStations',
+          columns,
+          values: [Number(key), school.startingStations[i], i],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'chrSchoolMap') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for chrSchoolMap');
+    }
+    const schoolMapPath = path.join(hoboleaksDir, 'schoolmap.json');
+    if (!fs.existsSync(schoolMapPath)) {
+      throw new Error(`Missing Hoboleaks school map file: ${schoolMapPath}`);
+    }
+
+    const schoolMap = readJsonFile(schoolMapPath);
+    const rows: InsertRow[] = [];
+    const columns = ['mapID', 'solarSystemID', 'schoolID'];
+    for (const [key, item] of Object.entries<any>(schoolMap)) {
+      rows.push({
+        table: 'chrSchoolMap',
+        columns,
+        values: [Number(key), item.solarSystemID, item.schoolID],
+      });
+    }
     return rows;
   } else if (tableName === 'industryActivity') {
     const activityIdMap: Record<string, number> = {
@@ -828,7 +961,7 @@ function getStaticInserts(k: typeof knexMysql | typeof knexPg): string[] {
   ];
 }
 
-export function generateMySqlDump(unzippedDir: string, outputPath: string, tableName?: string): void {
+export function generateMySqlDump(unzippedDir: string, outputPath: string, tableName?: string, hoboleaksDir?: string): void {
   // Build name cache for celestial objects before processing any tables
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -851,7 +984,7 @@ export function generateMySqlDump(unzippedDir: string, outputPath: string, table
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
       for (const line of serializeInsertRows(rows)) {
         output.push(line);
       }
@@ -918,6 +1051,7 @@ export function generatePgsqlDump(
   unzippedDir: string,
   outputPath: string,
   tableName?: string,
+  hoboleaksDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -940,7 +1074,7 @@ export function generatePgsqlDump(
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
       if (rows.length === 0) continue;
       const groups = new Map<string, InsertRow[]>();
       for (const row of rows) {
@@ -971,6 +1105,7 @@ export function generateMssqlDump(
   unzippedDir: string,
   outputPath: string,
   tableName?: string,
+  hoboleaksDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -994,7 +1129,7 @@ export function generateMssqlDump(
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
       if (rows.length === 0) continue;
       const groups = new Map<string, InsertRow[]>();
       for (const row of rows) {
@@ -1129,6 +1264,7 @@ export function generateOracleDump(
   unzippedDir: string,
   outputPath: string,
   tableName?: string,
+  hoboleaksDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -1191,7 +1327,7 @@ export function generateOracleDump(
       if (!tableMappings[currentTableName]) continue;
       if (tableName && currentTableName !== tableName) continue;
       try {
-        const rows = processTable(currentTableName, unzippedDir);
+        const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
         if (rows.length === 0) continue;
         for (const row of insertRowsToObjects(rows)) {
           writeLine(buildOracleInsert(currentTableName, row));
@@ -1304,6 +1440,18 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'iconID',
       { name: 'shortDescription', transform: (item) => null }
     ]
+  },
+  'chrSchools': {
+    files: ['schools.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'chrSchoolStartingStations': {
+    files: ['schools.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'chrSchoolMap': {
+    files: ['schoolmap.json'],
+    fields: [] // Custom processing in processTable function
   },
   'dgmTypeAttributes': {
     files: ['typeDogma.jsonl'],
@@ -1999,4 +2147,3 @@ function convertToRoman(num: number): string {
   }
   return roman;
 }
-

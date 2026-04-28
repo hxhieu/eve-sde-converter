@@ -332,6 +332,38 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.string('shortDescription', 500).nullable();
   },
 
+  chrSchools: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('schoolID').notNullable().primary();
+    table.integer('corporationID').nullable();
+    table.integer('careerID').nullable();
+    table.integer('raceID').nullable();
+    table.string('title', 255).nullable();
+    table.text('description').nullable();
+    table.text('characterDescription').nullable();
+    table.integer('iconID').nullable();
+    table.index(['corporationID'], 'ix_chrSchools_corporationID');
+    table.index(['raceID'], 'ix_chrSchools_raceID');
+  },
+
+  chrSchoolStartingStations: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('schoolID').notNullable();
+    table.integer('stationID').notNullable();
+    table.integer('sortOrder').notNullable();
+    table.primary(['schoolID', 'sortOrder']);
+    table.index(['stationID'], 'ix_chrSchoolStartingStations_stationID');
+  },
+
+  chrSchoolMap: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('mapID').notNullable().primary();
+    table.integer('solarSystemID').notNullable();
+    table.integer('schoolID').notNullable();
+    table.index(['solarSystemID'], 'ix_chrSchoolMap_solarSystemID');
+    table.index(['schoolID'], 'ix_chrSchoolMap_schoolID');
+  },
+
   crpActivities: (table, isMysql) => {
     if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
     table.integer('activityID').notNullable().primary();
@@ -1044,6 +1076,7 @@ export const tableOrder: string[] = [
   'agtAgentTypes', 'agtAgents', 'agtAgentsInSpace', 'agtResearchAgents',
   'certCerts', 'certMasteries', 'certSkills',
   'chrAncestries', 'chrAttributes', 'chrBloodlines', 'chrFactions', 'chrRaces',
+  'chrSchools', 'chrSchoolStartingStations', 'chrSchoolMap',
   'crpActivities', 'crpNPCCorporations', 'crpNPCDivisions',
   'dgmAttributeCategories', 'dgmAttributeTypes', 'dgmEffects', 'dgmTypeAttributes', 'dgmTypeEffects',
   'eveGraphics', 'eveIcons', 'eveUnits',

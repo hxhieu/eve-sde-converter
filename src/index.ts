@@ -6,7 +6,12 @@ import * as path from 'path';
 import {
   getLatestBuildNumber,
   downloadZip,
+  downloadLatestSdeZip,
+  downloadLatestHoboleaksTar,
   unzipFile,
+  extractTarXz,
+  getSdeBuildNumber,
+  validateHoboleaksRevision,
   generateMySqlDump,
   convertToSqlite,
   generatePgsqlDump,
@@ -29,6 +34,9 @@ program.command('convert')
   .description('Convert EVE SDE from JSONL to SQL dumps and SQLite')
   .option('--local-zip <path>', 'Path to local ZIP file to use instead of downloading')
   .option('--unzipped-dir <path>', 'Path to unzipped directory to use instead of downloading and unzipping')
+  .option('--hoboleaks-tar <path>', 'Path to local Hoboleaks SDE tar.xz file to use instead of downloading')
+  .option('--hoboleaks-dir <path>', 'Path to extracted Hoboleaks SDE directory to use instead of downloading and extracting')
+  .option('--output-dir <path>', 'Directory to write generated files', path.join(__dirname, '..', 'output'))
   .option('--table <tableName>', 'Process only the specified table')
   .option(
     '--dialects <list>',
@@ -59,17 +67,10 @@ program.command('convert')
         console.log('Unzipping file...');
         unzipFile(options.localZip, unzippedDir);
       } else if (!options.unzippedDir) {
-        // Original logic: download and unzip
-        // Get latest build number
-        console.log('Fetching latest build number...');
-        const buildNumber = await getLatestBuildNumber();
-        console.log(`Latest build number: ${buildNumber}`);
-
-        // Download and unzip
         const zipPath = path.join(__dirname, '..', 'temp.zip');
 
-        console.log('Downloading ZIP file...');
-        await downloadZip(buildNumber, zipPath);
+        console.log('Downloading latest EVE Ref CCP SDE ZIP file...');
+        await downloadLatestSdeZip(zipPath);
 
         console.log('Unzipping file...');
         unzipFile(zipPath, unzippedDir);
@@ -80,8 +81,29 @@ program.command('convert')
         console.log(`Using unzipped directory: ${unzippedDir}`);
       }
 
+      const sdeBuildNumber = getSdeBuildNumber(unzippedDir);
+      console.log(`SDE build number: ${sdeBuildNumber}`);
+
+      const hoboleaksDir = options.hoboleaksDir || path.join(__dirname, '..', 'refs', 'hoboleaks');
+      if (options.hoboleaksTar) {
+        console.log(`Using local Hoboleaks tar.xz file: ${options.hoboleaksTar}`);
+        console.log('Extracting Hoboleaks file...');
+        extractTarXz(options.hoboleaksTar, hoboleaksDir);
+      } else if (!options.hoboleaksDir) {
+        const hoboleaksTarPath = path.join(__dirname, '..', 'hoboleaks.tar.xz');
+        console.log('Downloading latest EVE Ref Hoboleaks SDE tar.xz file...');
+        await downloadLatestHoboleaksTar(hoboleaksTarPath);
+
+        console.log('Extracting Hoboleaks file...');
+        extractTarXz(hoboleaksTarPath, hoboleaksDir);
+        fs.unlinkSync(hoboleaksTarPath);
+      } else {
+        console.log(`Using Hoboleaks directory: ${hoboleaksDir}`);
+      }
+      validateHoboleaksRevision(hoboleaksDir, sdeBuildNumber);
+
       // Ensure output directory exists
-      const outputDir = path.join(__dirname, '..', 'output');
+      const outputDir = options.outputDir;
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
@@ -91,7 +113,7 @@ program.command('convert')
       const needsMysql = selectedDialects.has('mysql') || selectedDialects.has('sqlite');
       if (needsMysql) {
         console.log('Generating MySQL dump...');
-        generateMySqlDump(unzippedDir, mysqlDumpPath, options.table);
+        generateMySqlDump(unzippedDir, mysqlDumpPath, options.table, hoboleaksDir);
       }
 
       // Convert to SQLite (reads from MySQL dump)
@@ -108,19 +130,19 @@ program.command('convert')
       if (selectedDialects.has('postgres')) {
         const pgsqlPath = path.join(outputDir, 'sde-postgres.sql');
         console.log('Generating PostgreSQL dump...');
-        generatePgsqlDump(unzippedDir, pgsqlPath, options.table);
+        generatePgsqlDump(unzippedDir, pgsqlPath, options.table, hoboleaksDir);
       }
 
       if (selectedDialects.has('mssql')) {
         const mssqlPath = path.join(outputDir, 'sde-mssql.sql');
         console.log('Generating SQL Server dump...');
-        generateMssqlDump(unzippedDir, mssqlPath, options.table);
+        generateMssqlDump(unzippedDir, mssqlPath, options.table, hoboleaksDir);
       }
 
       if (selectedDialects.has('oracle')) {
         const oraclePath = path.join(outputDir, 'sde-oracle.sql');
         console.log('Generating Oracle dump...');
-        generateOracleDump(unzippedDir, oraclePath, options.table);
+        generateOracleDump(unzippedDir, oraclePath, options.table, hoboleaksDir);
       }
 
       console.log('Conversion completed successfully!');
