@@ -415,6 +415,35 @@ export function serializeInsertRows(
   return result;
 }
 
+function readRequiredHoboleaksJson(hoboleaksDir: string | undefined, fileName: string, tableName: string): any {
+  if (!hoboleaksDir) {
+    throw new Error(`Hoboleaks directory is required for ${tableName}`);
+  }
+
+  const filePath = path.join(hoboleaksDir, fileName);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Missing Hoboleaks file for ${tableName}: ${filePath}`);
+  }
+
+  return readJsonFile(filePath);
+}
+
+function pushKeyValueRows(
+  rows: InsertRow[],
+  table: string,
+  data: Record<string, any>,
+  keyColumn: string,
+  valueColumn: string,
+) {
+  for (const [key, value] of Object.entries<any>(data)) {
+    rows.push({
+      table,
+      columns: [keyColumn, valueColumn],
+      values: [Number(key), value],
+    });
+  }
+}
+
 export function processTable(tableName: string, unzippedDir: string, hoboleaksDir?: string): InsertRow[] {
   const mapping = tableMappings[tableName];
   if (!mapping) {
@@ -683,6 +712,599 @@ export function processTable(tableName: string, unzippedDir: string, hoboleaksDi
         columns,
         values: [Number(key), item.solarSystemID, item.schoolID],
       });
+    }
+    return rows;
+  } else if (tableName === 'accountingEntryTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'accountingentrytypes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = [
+      'entryTypeID',
+      'entryTypeNameID',
+      'entryTypeNameTranslated',
+      'description',
+      'name',
+      'entryJournalMessageID',
+      'entryJournalMessageTranslated',
+      'entryTypeDescriptionID',
+      'entryTypeDescriptionTranslated',
+    ];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [
+          Number(key),
+          item.entryTypeNameID ?? null,
+          item.entryTypeNameTranslated ?? null,
+          item.description ?? null,
+          item.name ?? null,
+          item.entryJournalMessageID ?? null,
+          item.entryJournalMessageTranslated ?? null,
+          item.entryTypeDescriptionID ?? null,
+          item.entryTypeDescriptionTranslated ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'agentTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'agenttypes.json', tableName);
+    const rows: InsertRow[] = [];
+    pushKeyValueRows(rows, tableName, data, 'agentTypeID', 'agentType');
+    return rows;
+  } else if (tableName === 'attributeOrders') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'attributeorders.json', tableName);
+    const rows: InsertRow[] = [];
+    for (const key of Object.keys(data)) {
+      rows.push({ table: tableName, columns: ['orderID'], values: [key] });
+    }
+    return rows;
+  } else if (tableName === 'attributeOrderNormalAttributes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'attributeorders.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['orderID', 'categoryPath', 'sortOrder', 'attributeID'];
+    for (const [orderID, categories] of Object.entries<any>(data)) {
+      for (const [categoryPath, category] of Object.entries<any>(categories)) {
+        for (let i = 0; i < (category.normalAttributes ?? []).length; i++) {
+          rows.push({ table: tableName, columns, values: [orderID, categoryPath, i, category.normalAttributes[i]] });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'attributeOrderGroupedAttributes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'attributeorders.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['orderID', 'categoryPath', 'sortOrder', 'groupName', 'attributeID'];
+    for (const [orderID, categories] of Object.entries<any>(data)) {
+      for (const [categoryPath, category] of Object.entries<any>(categories)) {
+        for (let i = 0; i < (category.groupedAttributes ?? []).length; i++) {
+          const group = category.groupedAttributes[i];
+          rows.push({ table: tableName, columns, values: [orderID, categoryPath, i, group[0], group[1]] });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'blueprints') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'blueprints.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['blueprintID', 'blueprintTypeID', 'maxProductionLimit'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [Number(key), item.blueprintTypeID ?? null, item.maxProductionLimit ?? null],
+      });
+    }
+    return rows;
+  } else if (tableName === 'cloneStates') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'clonestates.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['cloneStateID', 'internalDescription'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [Number(key), item.internalDescription ?? null],
+      });
+    }
+    return rows;
+  } else if (tableName === 'cloneStateSkills') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'clonestates.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['cloneStateID', 'skillTypeID', 'level'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const [skillTypeID, level] of Object.entries<any>(item.skills ?? {})) {
+        rows.push({ table: tableName, columns, values: [Number(key), Number(skillTypeID), level] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'compressibleTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'compressibletypes.json', tableName);
+    const rows: InsertRow[] = [];
+    pushKeyValueRows(rows, tableName, data, 'typeID', 'compressedTypeID');
+    return rows;
+  } else if (tableName === 'dbuffs') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dbuffs.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['dbuffID', 'displayNameID', 'developerDescription', 'operationName', 'aggregateMode', 'showOutputValueInUI'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [
+          Number(key),
+          item.displayNameID ?? null,
+          item.developerDescription ?? null,
+          item.operationName ?? null,
+          item.aggregateMode ?? null,
+          item.showOutputValueInUI ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'dbuffModifiers') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dbuffs.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['dbuffID', 'modifierSource', 'sortOrder', 'dogmaAttributeID', 'groupID', 'skillID'];
+    const sources = ['locationGroupModifiers', 'locationModifiers', 'locationRequiredSkillModifiers', 'itemModifiers'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const source of sources) {
+        if (!Array.isArray(item[source])) continue;
+        for (let i = 0; i < item[source].length; i++) {
+          const modifier = item[source][i];
+          rows.push({
+            table: tableName,
+            columns,
+            values: [
+              Number(key),
+              source,
+              i,
+              modifier.dogmaAttributeID ?? null,
+              modifier.groupID ?? null,
+              modifier.skillID ?? null,
+            ],
+          });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'dogmaEffectCategories') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dogmaeffectcategories.json', tableName);
+    const rows: InsertRow[] = [];
+    pushKeyValueRows(rows, tableName, data, 'categoryID', 'categoryName');
+    return rows;
+  } else if (tableName === 'dogmaUnits') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dogmaunits.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['unitID', 'displayName', 'description', 'name'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [Number(key), item.displayName ?? null, item.description ?? null, item.name ?? null],
+      });
+    }
+    return rows;
+  } else if (tableName === 'dynamicItemAttributeRanges') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dynamicitemattributes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'attributeID', 'min', 'max', 'highIsGood'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const [attributeID, range] of Object.entries<any>(item.attributeIDs ?? {})) {
+        rows.push({
+          table: tableName,
+          columns,
+          values: [Number(key), Number(attributeID), range.min ?? null, range.max ?? null, range.highIsGood ?? null],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'dynamicItemInputOutputMappings') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dynamicitemattributes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'sortOrder', 'resultingTypeID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      if (!Array.isArray(item.inputOutputMapping)) continue;
+      for (let i = 0; i < item.inputOutputMapping.length; i++) {
+        rows.push({ table: tableName, columns, values: [Number(key), i, item.inputOutputMapping[i].resultingType ?? null] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'dynamicItemApplicableTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'dynamicitemattributes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'mappingSortOrder', 'applicableTypeID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      if (!Array.isArray(item.inputOutputMapping)) continue;
+      for (let i = 0; i < item.inputOutputMapping.length; i++) {
+        for (const applicableTypeID of item.inputOutputMapping[i].applicableTypes ?? []) {
+          rows.push({ table: tableName, columns, values: [Number(key), i, applicableTypeID] });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'expertSystems') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'expertsystems.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['expertSystemID', 'internalName', 'esHidden', 'durationDays', 'esRetired'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [Number(key), item.internalName ?? null, item.esHidden ?? null, item.durationDays ?? null, item.esRetired ?? null],
+      });
+    }
+    return rows;
+  } else if (tableName === 'expertSystemSkills') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'expertsystems.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['expertSystemID', 'skillTypeID', 'level'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const [skillTypeID, level] of Object.entries<any>(item.skillsGranted ?? {})) {
+        rows.push({ table: tableName, columns, values: [Number(key), Number(skillTypeID), level] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'expertSystemShipTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'expertsystems.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['expertSystemID', 'shipTypeID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const shipTypeID of item.associatedShipTypes ?? []) {
+        rows.push({ table: tableName, columns, values: [Number(key), shipTypeID] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'graphicMaterialSets') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'graphicmaterialsets.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = [
+      'materialSetID',
+      'description',
+      'sofFactionName',
+      'sofRaceHint',
+      'sofPatternName',
+      'resPathInsert',
+      'material1',
+      'material2',
+      'material3',
+      'material4',
+      'custommaterial1',
+      'custommaterial2',
+    ];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: columns.map(column => column === 'materialSetID' ? Number(key) : item[column] ?? null),
+      });
+    }
+    return rows;
+  } else if (tableName === 'graphicMaterialSetColors') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'graphicmaterialsets.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['materialSetID', 'colorName', 'r', 'g', 'b', 'a'];
+    const colorNames = ['colorPrimary', 'colorHull', 'colorWindow', 'colorSecondary'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const colorName of colorNames) {
+        const color = item[colorName];
+        if (!color) continue;
+        rows.push({ table: tableName, columns, values: [Number(key), colorName, color.r ?? null, color.g ?? null, color.b ?? null, color.a ?? null] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryActivities') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industryactivities.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['activityID', 'description', 'activityName'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), item.description ?? null, item.activityName ?? null] });
+    }
+    return rows;
+  } else if (tableName === 'industryAssemblyLines') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industryassemblylines.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['assemblyLineID', 'name', 'description', 'activityID', 'baseMaterialMultiplier', 'baseTimeMultiplier', 'baseCostMultiplier'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [
+          Number(key),
+          item.name ?? null,
+          item.description ?? null,
+          item.activity ?? null,
+          item.base_material_multiplier ?? null,
+          item.base_time_multiplier ?? null,
+          item.base_cost_multiplier ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'industryAssemblyLineDetails') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industryassemblylines.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['assemblyLineID', 'detailSource', 'detailID', 'materialMultiplier', 'timeMultiplier', 'costMultiplier'];
+    const sources = [
+      ['details_per_group', 'groupID'],
+      ['details_per_category', 'categoryID'],
+      ['details_per_type_list', 'type_list_id'],
+    ];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const [source, idField] of sources) {
+        for (const detail of item[source] ?? []) {
+          rows.push({
+            table: tableName,
+            columns,
+            values: [
+              Number(key),
+              source,
+              detail[idField] ?? null,
+              detail.material_multiplier ?? null,
+              detail.time_multiplier ?? null,
+              detail.cost_multiplier ?? null,
+            ],
+          });
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryInstallationTypes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industryinstallationtypes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['installationTypeID', 'typeID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), item.type_id ?? null] });
+    }
+    return rows;
+  } else if (tableName === 'industryInstallationAssemblyLines') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industryinstallationtypes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['installationTypeID', 'assemblyLineID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const assemblyLineID of item.assembly_lines ?? []) {
+        rows.push({ table: tableName, columns, values: [Number(key), assemblyLineID] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryModifierSources') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industrymodifiersources.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'activityName', 'modifierType', 'sortOrder', 'dogmaAttributeID', 'filterID'];
+    for (const [typeID, activities] of Object.entries<any>(data)) {
+      for (const [activityName, modifiers] of Object.entries<any>(activities)) {
+        for (const modifierType of ['material', 'cost', 'time']) {
+          for (let i = 0; i < (modifiers[modifierType] ?? []).length; i++) {
+            const modifier = modifiers[modifierType][i];
+            rows.push({
+              table: tableName,
+              columns,
+              values: [Number(typeID), activityName, modifierType, i, modifier.dogmaAttributeID ?? null, modifier.filterID ?? null],
+            });
+          }
+        }
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryTargetFilters') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industrytargetfilters.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['filterID', 'name'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), item.name ?? null] });
+    }
+    return rows;
+  } else if (tableName === 'industryTargetFilterCategories') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industrytargetfilters.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['filterID', 'categoryID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const categoryID of item.categoryIDs ?? []) {
+        rows.push({ table: tableName, columns, values: [Number(key), categoryID] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'industryTargetFilterGroups') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'industrytargetfilters.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['filterID', 'groupID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const groupID of item.groupIDs ?? []) {
+        rows.push({ table: tableName, columns, values: [Number(key), groupID] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'localizationDgmAttributes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'localization_dgmattributes.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['attributeID', 'languageID', 'displayName', 'description'];
+    for (const [attributeID, languages] of Object.entries<any>(data)) {
+      for (const [languageID, localization] of Object.entries<any>(languages)) {
+        rows.push({
+          table: tableName,
+          columns,
+          values: [Number(attributeID), languageID, localization.display_name ?? null, localization.description ?? null],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'localizationLanguages') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'localization_languages.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['languageIndex', 'languageID'];
+    for (const [key, value] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), value] });
+    }
+    return rows;
+  } else if (tableName === 'repackagedVolumes') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'repackagedvolumes.json', tableName);
+    const rows: InsertRow[] = [];
+    pushKeyValueRows(rows, tableName, data, 'typeID', 'volume');
+    return rows;
+  } else if (tableName === 'skillPlans') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for skillPlans');
+    }
+    const skillPlansPath = path.join(hoboleaksDir, 'skillplans.json');
+    if (!fs.existsSync(skillPlansPath)) {
+      throw new Error(`Missing Hoboleaks skill plans file: ${skillPlansPath}`);
+    }
+
+    const skillPlans = readJsonFile(skillPlansPath);
+    const rows: InsertRow[] = [];
+    const columns = ['skillPlanID', 'internalName', 'description', 'careerPathID', 'factionID', 'name', 'npcCorporationDivision'];
+    for (const [key, skillPlan] of Object.entries<any>(skillPlans)) {
+      rows.push({
+        table: 'skillPlans',
+        columns,
+        values: [
+          Number(key),
+          skillPlan.internalName ?? null,
+          skillPlan.description ?? null,
+          skillPlan.careerPathID ?? null,
+          skillPlan.factionID ?? null,
+          skillPlan.name ?? null,
+          skillPlan.npcCorporationDivision ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'skillPlanMilestones') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for skillPlanMilestones');
+    }
+    const skillPlansPath = path.join(hoboleaksDir, 'skillplans.json');
+    if (!fs.existsSync(skillPlansPath)) {
+      throw new Error(`Missing Hoboleaks skill plans file: ${skillPlansPath}`);
+    }
+
+    const skillPlans = readJsonFile(skillPlansPath);
+    const rows: InsertRow[] = [];
+    const columns = ['skillPlanID', 'sortOrder', 'typeID', 'level'];
+    for (const [key, skillPlan] of Object.entries<any>(skillPlans)) {
+      if (!Array.isArray(skillPlan.milestones)) continue;
+      for (let i = 0; i < skillPlan.milestones.length; i++) {
+        const milestone = skillPlan.milestones[i];
+        rows.push({
+          table: 'skillPlanMilestones',
+          columns,
+          values: [Number(key), i, milestone.typeID, milestone.level],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'skillPlanSkillRequirements') {
+    if (!hoboleaksDir) {
+      throw new Error('Hoboleaks directory is required for skillPlanSkillRequirements');
+    }
+    const skillPlansPath = path.join(hoboleaksDir, 'skillplans.json');
+    if (!fs.existsSync(skillPlansPath)) {
+      throw new Error(`Missing Hoboleaks skill plans file: ${skillPlansPath}`);
+    }
+
+    const skillPlans = readJsonFile(skillPlansPath);
+    const rows: InsertRow[] = [];
+    const columns = ['skillPlanID', 'sortOrder', 'typeID', 'level'];
+    for (const [key, skillPlan] of Object.entries<any>(skillPlans)) {
+      if (!Array.isArray(skillPlan.skillRequirements)) continue;
+      for (let i = 0; i < skillPlan.skillRequirements.length; i++) {
+        const requirement = skillPlan.skillRequirements[i];
+        rows.push({
+          table: 'skillPlanSkillRequirements',
+          columns,
+          values: [Number(key), i, requirement.typeID, requirement.level],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'skinMaterials' && hoboleaksDir && fs.existsSync(path.join(hoboleaksDir, 'skinmaterials.json'))) {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'skinmaterials.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['skinMaterialID', 'displayNameID', 'materialSetID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [item.skinMaterialID ?? Number(key), item.displayNameID ?? null, item.materialSetID ?? null],
+      });
+    }
+    return rows;
+  } else if (tableName === 'skins' && hoboleaksDir && fs.existsSync(path.join(hoboleaksDir, 'skins.json'))) {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'skins.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = [
+      'skinID',
+      'internalName',
+      'skinMaterialID',
+      'visibleTranquility',
+      'allowCCPDevs',
+      'visibleSerenity',
+      'isStructureSkin',
+      'skinDescription',
+    ];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({
+        table: tableName,
+        columns,
+        values: [
+          item.skinID ?? Number(key),
+          item.internalName ?? null,
+          item.skinMaterialID ?? null,
+          item.visibleTranquility ?? null,
+          item.allowCCPDevs ?? null,
+          item.visibleSerenity ?? null,
+          item.isStructureSkin ?? null,
+          item.skinDescription ?? null,
+        ],
+      });
+    }
+    return rows;
+  } else if (tableName === 'skinShip' && hoboleaksDir && fs.existsSync(path.join(hoboleaksDir, 'skins.json'))) {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'skins.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['skinID', 'typeID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const typeID of item.types ?? []) {
+        rows.push({ table: tableName, columns, values: [item.skinID ?? Number(key), typeID] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'skinMaterialNames') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'skinmaterialnames.json', tableName);
+    const rows: InsertRow[] = [];
+    pushKeyValueRows(rows, tableName, data, 'skinMaterialID', 'materialName');
+    return rows;
+  } else if (tableName === 'stationStandingRestrictionServices') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'stationstandingsrestrictions.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['corporationID', 'serviceID', 'standing'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const [serviceID, standing] of Object.entries<any>(item.services ?? {})) {
+        rows.push({ table: tableName, columns, values: [Number(key), Number(serviceID), standing] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'typeMaterials') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'typematerials.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'materialTypeID', 'quantity'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const material of item.materials ?? []) {
+        rows.push({ table: tableName, columns, values: [Number(key), material.materialTypeID, material.quantity] });
+      }
+    }
+    return rows;
+  } else if (tableName === 'typeRandomizedMaterials') {
+    const data = readRequiredHoboleaksJson(hoboleaksDir, 'typematerials.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['typeID', 'materialTypeID', 'quantityMin', 'quantityMax'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      for (const material of item.randomizedMaterials ?? []) {
+        rows.push({
+          table: tableName,
+          columns,
+          values: [Number(key), material.materialTypeID, material.quantityMin ?? null, material.quantityMax ?? null],
+        });
+      }
     }
     return rows;
   } else if (tableName === 'industryActivity') {
@@ -1451,6 +2073,166 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
   },
   'chrSchoolMap': {
     files: ['schoolmap.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'accountingEntryTypes': {
+    files: ['accountingentrytypes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'agentTypes': {
+    files: ['agenttypes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'attributeOrders': {
+    files: ['attributeorders.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'attributeOrderNormalAttributes': {
+    files: ['attributeorders.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'attributeOrderGroupedAttributes': {
+    files: ['attributeorders.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'blueprints': {
+    files: ['blueprints.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'cloneStates': {
+    files: ['clonestates.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'cloneStateSkills': {
+    files: ['clonestates.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'compressibleTypes': {
+    files: ['compressibletypes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dbuffs': {
+    files: ['dbuffs.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dbuffModifiers': {
+    files: ['dbuffs.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dogmaEffectCategories': {
+    files: ['dogmaeffectcategories.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dogmaUnits': {
+    files: ['dogmaunits.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dynamicItemAttributeRanges': {
+    files: ['dynamicitemattributes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dynamicItemInputOutputMappings': {
+    files: ['dynamicitemattributes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'dynamicItemApplicableTypes': {
+    files: ['dynamicitemattributes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'expertSystems': {
+    files: ['expertsystems.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'expertSystemSkills': {
+    files: ['expertsystems.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'expertSystemShipTypes': {
+    files: ['expertsystems.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'graphicMaterialSets': {
+    files: ['graphicmaterialsets.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'graphicMaterialSetColors': {
+    files: ['graphicmaterialsets.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryActivities': {
+    files: ['industryactivities.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryAssemblyLines': {
+    files: ['industryassemblylines.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryAssemblyLineDetails': {
+    files: ['industryassemblylines.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryInstallationTypes': {
+    files: ['industryinstallationtypes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryInstallationAssemblyLines': {
+    files: ['industryinstallationtypes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryModifierSources': {
+    files: ['industrymodifiersources.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryTargetFilters': {
+    files: ['industrytargetfilters.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryTargetFilterCategories': {
+    files: ['industrytargetfilters.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'industryTargetFilterGroups': {
+    files: ['industrytargetfilters.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'localizationDgmAttributes': {
+    files: ['localization_dgmattributes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'localizationLanguages': {
+    files: ['localization_languages.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'repackagedVolumes': {
+    files: ['repackagedvolumes.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'skillPlans': {
+    files: ['skillplans.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'skillPlanMilestones': {
+    files: ['skillplans.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'skillPlanSkillRequirements': {
+    files: ['skillplans.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'skinMaterialNames': {
+    files: ['skinmaterialnames.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'stationStandingRestrictionServices': {
+    files: ['stationstandingsrestrictions.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'typeMaterials': {
+    files: ['typematerials.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'typeRandomizedMaterials': {
+    files: ['typematerials.json'],
     fields: [] // Custom processing in processTable function
   },
   'dgmTypeAttributes': {
