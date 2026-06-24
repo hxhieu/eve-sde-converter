@@ -546,6 +546,48 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.primary(['materialSetID', 'colorName']);
   },
 
+  fsdGraphicIDs: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicID').notNullable().primary();
+    table.integer('graphicLocationID').nullable();
+    table.index(['graphicLocationID'], 'ix_fsdGraphicIDs_graphicLocationID');
+  },
+
+  fsdGraphicLocations: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable().primary();
+    table.string('hull', 100).nullable();
+  },
+
+  fsdGraphicLocationDirectionalLocators: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable();
+    table.integer('ordinal').notNullable();
+    table.string('category', 100).nullable();
+    table.string('name', 100).nullable();
+    table.double('positionX').notNullable();
+    table.double('positionY').notNullable();
+    table.double('positionZ').notNullable();
+    table.double('directionX').notNullable();
+    table.double('directionY').notNullable();
+    table.double('directionZ').notNullable();
+    table.primary(['graphicLocationID', 'ordinal']);
+    table.index(['category'], 'ix_fsdGraphicLocationDirectionalLocators_category');
+  },
+
+  fsdGraphicLocationLocators: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable();
+    table.integer('ordinal').notNullable();
+    table.string('category', 100).nullable();
+    table.string('name', 100).nullable();
+    table.double('positionX').notNullable();
+    table.double('positionY').notNullable();
+    table.double('positionZ').notNullable();
+    table.primary(['graphicLocationID', 'ordinal']);
+    table.index(['category'], 'ix_fsdGraphicLocationLocators_category');
+  },
+
   industryActivities: (table, isMysql) => {
     if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
     table.integer('activityID').notNullable().primary();
@@ -1437,6 +1479,8 @@ export const tableOrder: string[] = [
   'dynamicItemAttributeRanges', 'dynamicItemInputOutputMappings', 'dynamicItemApplicableTypes',
   'expertSystems', 'expertSystemSkills', 'expertSystemShipTypes',
   'graphicMaterialSets', 'graphicMaterialSetColors',
+  'fsdGraphicIDs', 'fsdGraphicLocations', 'fsdGraphicLocationDirectionalLocators',
+  'fsdGraphicLocationLocators',
   'industryActivities', 'industryAssemblyLines', 'industryAssemblyLineDetails',
   'industryInstallationTypes', 'industryInstallationAssemblyLines', 'industryModifierSources',
   'industryTargetFilters', 'industryTargetFilterCategories', 'industryTargetFilterGroups',

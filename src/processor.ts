@@ -428,6 +428,29 @@ function readRequiredHoboleaksJson(hoboleaksDir: string | undefined, fileName: s
   return readJsonFile(filePath);
 }
 
+function readRequiredFsdJson(fsdDir: string | undefined, fileName: string, tableName: string): any {
+  if (!fsdDir) {
+    throw new Error(`FSD directory is required for ${tableName}`);
+  }
+
+  const filePath = path.join(fsdDir, fileName);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Missing FSD file for ${tableName}: ${filePath}`);
+  }
+
+  return readJsonFile(filePath);
+}
+
+function vectorComponent(vector: any, component: 'x' | 'y' | 'z', tableName: string, rowKey: string): number {
+  const value = vector?.[component];
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numberValue)) {
+    throw new Error(`Invalid ${component} vector component for ${tableName} row ${rowKey}`);
+  }
+
+  return numberValue;
+}
+
 function pushKeyValueRows(
   rows: InsertRow[],
   table: string,
@@ -444,12 +467,90 @@ function pushKeyValueRows(
   }
 }
 
-export function processTable(tableName: string, unzippedDir: string, hoboleaksDir?: string): InsertRow[] {
+export function processTable(tableName: string, unzippedDir: string, hoboleaksDir?: string, fsdDir?: string): InsertRow[] {
   const mapping = tableMappings[tableName];
   if (!mapping) {
     throw new Error(`No mapping for ${tableName}`);
   }
-  if (tableName === 'invUniqueNames') {
+  if (tableName === 'fsdGraphicIDs') {
+    const data = readRequiredFsdJson(fsdDir, 'graphicids.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['graphicID', 'graphicLocationID'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), item.graphicLocationID ?? null] });
+    }
+    return rows;
+  } else if (tableName === 'fsdGraphicLocations') {
+    const data = readRequiredFsdJson(fsdDir, 'graphiclocations.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['graphicLocationID', 'hull'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      rows.push({ table: tableName, columns, values: [Number(key), item.hull ?? null] });
+    }
+    return rows;
+  } else if (tableName === 'fsdGraphicLocationDirectionalLocators') {
+    const data = readRequiredFsdJson(fsdDir, 'graphiclocations.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = [
+      'graphicLocationID',
+      'ordinal',
+      'category',
+      'name',
+      'positionX',
+      'positionY',
+      'positionZ',
+      'directionX',
+      'directionY',
+      'directionZ',
+    ];
+    for (const [key, item] of Object.entries<any>(data)) {
+      const graphicLocationID = Number(key);
+      for (const [ordinal, locator] of (item.directionalLocators ?? []).entries()) {
+        const rowKey = `${key}/${ordinal}`;
+        rows.push({
+          table: tableName,
+          columns,
+          values: [
+            graphicLocationID,
+            ordinal,
+            locator.category ?? null,
+            locator.name ?? null,
+            vectorComponent(locator.position, 'x', tableName, rowKey),
+            vectorComponent(locator.position, 'y', tableName, rowKey),
+            vectorComponent(locator.position, 'z', tableName, rowKey),
+            vectorComponent(locator.direction, 'x', tableName, rowKey),
+            vectorComponent(locator.direction, 'y', tableName, rowKey),
+            vectorComponent(locator.direction, 'z', tableName, rowKey),
+          ],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'fsdGraphicLocationLocators') {
+    const data = readRequiredFsdJson(fsdDir, 'graphiclocations.json', tableName);
+    const rows: InsertRow[] = [];
+    const columns = ['graphicLocationID', 'ordinal', 'category', 'name', 'positionX', 'positionY', 'positionZ'];
+    for (const [key, item] of Object.entries<any>(data)) {
+      const graphicLocationID = Number(key);
+      for (const [ordinal, locator] of (item.locators ?? []).entries()) {
+        const rowKey = `${key}/${ordinal}`;
+        rows.push({
+          table: tableName,
+          columns,
+          values: [
+            graphicLocationID,
+            ordinal,
+            locator.category ?? null,
+            locator.name ?? null,
+            vectorComponent(locator.position, 'x', tableName, rowKey),
+            vectorComponent(locator.position, 'y', tableName, rowKey),
+            vectorComponent(locator.position, 'z', tableName, rowKey),
+          ],
+        });
+      }
+    }
+    return rows;
+  } else if (tableName === 'invUniqueNames') {
     const uniqueByID = new Map<number, {itemID: number, itemName: string, groupID: number}>();
     for (const fileName of mapping.files) {
       const filePath = path.join(unzippedDir, fileName);
@@ -1578,6 +1679,12 @@ const identityTables = new Set(['invTraits']);
 
 /** Tables that have static hard-coded data (not sourced from JSONL files). */
 const staticDataTables = new Set(['invFlags', 'mapUniverse', 'trnTranslationColumns']);
+const fsdTables = new Set([
+  'fsdGraphicIDs',
+  'fsdGraphicLocations',
+  'fsdGraphicLocationDirectionalLocators',
+  'fsdGraphicLocationLocators',
+]);
 
 /** Generate INSERT SQL for static-data tables using knex MySQL query builder. */
 function getStaticInserts(k: typeof knexMysql | typeof knexPg): string[] {
@@ -1588,7 +1695,7 @@ function getStaticInserts(k: typeof knexMysql | typeof knexPg): string[] {
   ];
 }
 
-export function generateMySqlDump(unzippedDir: string, outputPath: string, tableName?: string, hoboleaksDir?: string): void {
+export function generateMySqlDump(unzippedDir: string, outputPath: string, tableName?: string, hoboleaksDir?: string, fsdDir?: string): void {
   // Build name cache for celestial objects before processing any tables
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -1610,12 +1717,14 @@ export function generateMySqlDump(unzippedDir: string, outputPath: string, table
   for (const currentTableName of tableOrder) {
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
+    if (!fsdDir && fsdTables.has(currentTableName) && !tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir, fsdDir);
       for (const line of serializeInsertRows(rows)) {
         output.push(line);
       }
     } catch (e: any) {
+      if (tableName) throw e;
       console.warn(`Skipping ${currentTableName}: ${e.message}`);
     }
   }
@@ -1679,6 +1788,7 @@ export function generatePgsqlDump(
   outputPath: string,
   tableName?: string,
   hoboleaksDir?: string,
+  fsdDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -1700,8 +1810,9 @@ export function generatePgsqlDump(
   for (const currentTableName of tableOrder) {
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
+    if (!fsdDir && fsdTables.has(currentTableName) && !tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir, fsdDir);
       if (rows.length === 0) continue;
       const groups = new Map<string, InsertRow[]>();
       for (const row of rows) {
@@ -1718,6 +1829,7 @@ export function generatePgsqlDump(
         }
       }
     } catch (e: any) {
+      if (tableName) throw e;
       console.warn(`Skipping ${currentTableName}: ${e.message}`);
     }
   }
@@ -1733,6 +1845,7 @@ export function generateMssqlDump(
   outputPath: string,
   tableName?: string,
   hoboleaksDir?: string,
+  fsdDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -1755,8 +1868,9 @@ export function generateMssqlDump(
   for (const currentTableName of tableOrder) {
     if (!tableMappings[currentTableName]) continue;
     if (tableName && currentTableName !== tableName) continue;
+    if (!fsdDir && fsdTables.has(currentTableName) && !tableName) continue;
     try {
-      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
+      const rows = processTable(currentTableName, unzippedDir, hoboleaksDir, fsdDir);
       if (rows.length === 0) continue;
       const groups = new Map<string, InsertRow[]>();
       for (const row of rows) {
@@ -1781,6 +1895,7 @@ export function generateMssqlDump(
         }
       }
     } catch (e: any) {
+      if (tableName) throw e;
       console.warn(`Skipping ${currentTableName}: ${e.message}`);
     }
   }
@@ -1892,6 +2007,7 @@ export function generateOracleDump(
   outputPath: string,
   tableName?: string,
   hoboleaksDir?: string,
+  fsdDir?: string,
 ): void {
   celestialNameCache = buildNameCache(unzippedDir);
 
@@ -1953,13 +2069,15 @@ export function generateOracleDump(
     for (const currentTableName of tableOrder) {
       if (!tableMappings[currentTableName]) continue;
       if (tableName && currentTableName !== tableName) continue;
+      if (!fsdDir && fsdTables.has(currentTableName) && !tableName) continue;
       try {
-        const rows = processTable(currentTableName, unzippedDir, hoboleaksDir);
+        const rows = processTable(currentTableName, unzippedDir, hoboleaksDir, fsdDir);
         if (rows.length === 0) continue;
         for (const row of insertRowsToObjects(rows)) {
           writeLine(buildOracleInsert(currentTableName, row));
         }
       } catch (e: any) {
+        if (tableName) throw e;
         console.warn(`Skipping ${currentTableName}: ${e.message}`);
       }
     }
@@ -2162,6 +2280,22 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
   },
   'graphicMaterialSetColors': {
     files: ['graphicmaterialsets.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'fsdGraphicIDs': {
+    files: ['graphicids.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'fsdGraphicLocations': {
+    files: ['graphiclocations.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'fsdGraphicLocationDirectionalLocators': {
+    files: ['graphiclocations.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'fsdGraphicLocationLocators': {
+    files: ['graphiclocations.json'],
     fields: [] // Custom processing in processTable function
   },
   'industryActivities': {

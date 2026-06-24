@@ -7,6 +7,7 @@ A CLI tool built with TypeScript to convert EVE Online Static Data Export (SDE) 
 - Downloads the latest mirrored CCP JSONL SDE archive from EVE Ref
 - Downloads the latest Hoboleaks SDE archive from EVE Ref
 - Validates required Hoboleaks file revisions against the CCP SDE build number
+- Projects extracted FSD JSON into normalized SQL tables when `--fsd-dir` is provided
 - Processes JSONL files and maps data to MySQL schema
 - Generates MySQL dump files
 - Converts MySQL dump to SQLite format using the included mysql2sqlite utility
@@ -66,9 +67,15 @@ Useful local-source options:
 node dist/index.js convert \
   --unzipped-dir /path/to/extracted/jsonl \
   --hoboleaks-dir /path/to/extracted/hoboleaks \
+  --fsd-dir /path/to/extracted/fsd \
   --dialects sqlite \
   --output-dir /tmp/eve-sde-output
 ```
+
+The FSD directory is optional for normal SDE generation. When present, it should contain
+`graphicids.json` and `graphiclocations.json`; these are projected into the
+`fsdGraphicIDs`, `fsdGraphicLocations`, `fsdGraphicLocationDirectionalLocators`,
+and `fsdGraphicLocationLocators` tables.
 
 ## Output
 

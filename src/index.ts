@@ -36,6 +36,7 @@ program.command('convert')
   .option('--unzipped-dir <path>', 'Path to unzipped directory to use instead of downloading and unzipping')
   .option('--hoboleaks-tar <path>', 'Path to local Hoboleaks SDE tar.xz file to use instead of downloading')
   .option('--hoboleaks-dir <path>', 'Path to extracted Hoboleaks SDE directory to use instead of downloading and extracting')
+  .option('--fsd-dir <path>', 'Path to extracted FSD JSON directory')
   .option('--output-dir <path>', 'Directory to write generated files', path.join(__dirname, '..', 'output'))
   .option('--table <tableName>', 'Process only the specified table')
   .option(
@@ -102,6 +103,11 @@ program.command('convert')
       }
       validateHoboleaksRevision(hoboleaksDir, sdeBuildNumber);
 
+      const fsdDir = options.fsdDir;
+      if (fsdDir) {
+        console.log(`Using FSD directory: ${fsdDir}`);
+      }
+
       // Ensure output directory exists
       const outputDir = options.outputDir;
       if (!fs.existsSync(outputDir)) {
@@ -113,7 +119,7 @@ program.command('convert')
       const needsMysql = selectedDialects.has('mysql') || selectedDialects.has('sqlite');
       if (needsMysql) {
         console.log('Generating MySQL dump...');
-        generateMySqlDump(unzippedDir, mysqlDumpPath, options.table, hoboleaksDir);
+        generateMySqlDump(unzippedDir, mysqlDumpPath, options.table, hoboleaksDir, fsdDir);
       }
 
       // Convert to SQLite (reads from MySQL dump)
@@ -130,19 +136,19 @@ program.command('convert')
       if (selectedDialects.has('postgres')) {
         const pgsqlPath = path.join(outputDir, 'sde-postgres.sql');
         console.log('Generating PostgreSQL dump...');
-        generatePgsqlDump(unzippedDir, pgsqlPath, options.table, hoboleaksDir);
+        generatePgsqlDump(unzippedDir, pgsqlPath, options.table, hoboleaksDir, fsdDir);
       }
 
       if (selectedDialects.has('mssql')) {
         const mssqlPath = path.join(outputDir, 'sde-mssql.sql');
         console.log('Generating SQL Server dump...');
-        generateMssqlDump(unzippedDir, mssqlPath, options.table, hoboleaksDir);
+        generateMssqlDump(unzippedDir, mssqlPath, options.table, hoboleaksDir, fsdDir);
       }
 
       if (selectedDialects.has('oracle')) {
         const oraclePath = path.join(outputDir, 'sde-oracle.sql');
         console.log('Generating Oracle dump...');
-        generateOracleDump(unzippedDir, oraclePath, options.table, hoboleaksDir);
+        generateOracleDump(unzippedDir, oraclePath, options.table, hoboleaksDir, fsdDir);
       }
 
       console.log('Conversion completed successfully!');
