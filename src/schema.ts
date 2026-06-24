@@ -332,6 +332,420 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.string('shortDescription', 500).nullable();
   },
 
+  chrSchools: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('schoolID').notNullable().primary();
+    table.integer('corporationID').nullable();
+    table.integer('careerID').nullable();
+    table.integer('raceID').nullable();
+    table.string('title', 255).nullable();
+    table.text('description').nullable();
+    table.text('characterDescription').nullable();
+    table.integer('iconID').nullable();
+    table.index(['corporationID'], 'ix_chrSchools_corporationID');
+    table.index(['raceID'], 'ix_chrSchools_raceID');
+  },
+
+  chrSchoolStartingStations: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('schoolID').notNullable();
+    table.integer('stationID').notNullable();
+    table.integer('sortOrder').notNullable();
+    table.primary(['schoolID', 'sortOrder']);
+    table.index(['stationID'], 'ix_chrSchoolStartingStations_stationID');
+  },
+
+  chrSchoolMap: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('mapID').notNullable().primary();
+    table.integer('solarSystemID').notNullable();
+    table.integer('schoolID').notNullable();
+    table.index(['solarSystemID'], 'ix_chrSchoolMap_solarSystemID');
+    table.index(['schoolID'], 'ix_chrSchoolMap_schoolID');
+  },
+
+  accountingEntryTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('entryTypeID').notNullable().primary();
+    table.integer('entryTypeNameID').nullable();
+    table.text('entryTypeNameTranslated').nullable();
+    table.text('description').nullable();
+    table.text('name').nullable();
+    table.integer('entryJournalMessageID').nullable();
+    table.text('entryJournalMessageTranslated').nullable();
+    table.integer('entryTypeDescriptionID').nullable();
+    table.text('entryTypeDescriptionTranslated').nullable();
+  },
+
+  agentTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('agentTypeID').notNullable().primary();
+    table.string('agentType', 100).nullable();
+  },
+
+  attributeOrders: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.string('orderID', 100).notNullable().primary();
+  },
+
+  attributeOrderNormalAttributes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.string('orderID', 100).notNullable();
+    table.string('categoryPath', 200).notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('attributeID').notNullable();
+    table.primary(['orderID', 'categoryPath', 'sortOrder']);
+  },
+
+  attributeOrderGroupedAttributes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.string('orderID', 100).notNullable();
+    table.string('categoryPath', 200).notNullable();
+    table.integer('sortOrder').notNullable();
+    table.string('groupName', 100).notNullable();
+    table.integer('attributeID').notNullable();
+    table.primary(['orderID', 'categoryPath', 'sortOrder']);
+  },
+
+  blueprints: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('blueprintID').notNullable().primary();
+    table.integer('blueprintTypeID').nullable();
+    table.integer('maxProductionLimit').nullable();
+  },
+
+  cloneStates: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('cloneStateID').notNullable().primary();
+    table.text('internalDescription').nullable();
+  },
+
+  cloneStateSkills: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('cloneStateID').notNullable();
+    table.integer('skillTypeID').notNullable();
+    table.integer('level').notNullable();
+    table.primary(['cloneStateID', 'skillTypeID']);
+  },
+
+  compressibleTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable().primary();
+    table.integer('compressedTypeID').notNullable();
+  },
+
+  dbuffs: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('dbuffID').notNullable().primary();
+    table.integer('displayNameID').nullable();
+    table.text('developerDescription').nullable();
+    table.string('operationName', 100).nullable();
+    table.string('aggregateMode', 100).nullable();
+    table.string('showOutputValueInUI', 100).nullable();
+  },
+
+  dbuffModifiers: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('dbuffID').notNullable();
+    table.string('modifierSource', 40).notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('dogmaAttributeID').nullable();
+    table.integer('groupID').nullable();
+    table.integer('skillID').nullable();
+    table.primary(['dbuffID', 'modifierSource', 'sortOrder']);
+  },
+
+  dogmaEffectCategories: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('categoryID').notNullable().primary();
+    table.string('categoryName', 100).nullable();
+  },
+
+  dogmaUnits: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('unitID').notNullable().primary();
+    table.string('displayName', 255).nullable();
+    table.text('description').nullable();
+    table.string('name', 255).nullable();
+  },
+
+  dynamicItemAttributeRanges: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.integer('attributeID').notNullable();
+    table.double('min').nullable();
+    table.double('max').nullable();
+    boolCol(table, 'highIsGood', isMysql).nullable();
+    table.primary(['typeID', 'attributeID']);
+  },
+
+  dynamicItemInputOutputMappings: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('resultingTypeID').nullable();
+    table.primary(['typeID', 'sortOrder']);
+  },
+
+  dynamicItemApplicableTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.integer('mappingSortOrder').notNullable();
+    table.integer('applicableTypeID').notNullable();
+    table.primary(['typeID', 'mappingSortOrder', 'applicableTypeID']);
+  },
+
+  expertSystems: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('expertSystemID').notNullable().primary();
+    table.string('internalName', 255).nullable();
+    boolCol(table, 'esHidden', isMysql).nullable();
+    table.integer('durationDays').nullable();
+    boolCol(table, 'esRetired', isMysql).nullable();
+  },
+
+  expertSystemSkills: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('expertSystemID').notNullable();
+    table.integer('skillTypeID').notNullable();
+    table.integer('level').notNullable();
+    table.primary(['expertSystemID', 'skillTypeID']);
+  },
+
+  expertSystemShipTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('expertSystemID').notNullable();
+    table.integer('shipTypeID').notNullable();
+    table.primary(['expertSystemID', 'shipTypeID']);
+  },
+
+  graphicMaterialSets: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('materialSetID').notNullable().primary();
+    table.text('description').nullable();
+    table.string('sofFactionName', 255).nullable();
+    table.string('sofRaceHint', 255).nullable();
+    table.string('sofPatternName', 255).nullable();
+    table.text('resPathInsert').nullable();
+    table.text('material1').nullable();
+    table.text('material2').nullable();
+    table.text('material3').nullable();
+    table.text('material4').nullable();
+    table.text('custommaterial1').nullable();
+    table.text('custommaterial2').nullable();
+  },
+
+  graphicMaterialSetColors: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('materialSetID').notNullable();
+    table.string('colorName', 40).notNullable();
+    table.double('r').nullable();
+    table.double('g').nullable();
+    table.double('b').nullable();
+    table.double('a').nullable();
+    table.primary(['materialSetID', 'colorName']);
+  },
+
+  fsdGraphicIDs: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicID').notNullable().primary();
+    table.integer('graphicLocationID').nullable();
+    table.index(['graphicLocationID'], 'ix_fsdGraphicIDs_graphicLocationID');
+  },
+
+  fsdGraphicLocations: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable().primary();
+    table.string('hull', 100).nullable();
+  },
+
+  fsdGraphicLocationDirectionalLocators: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable();
+    table.integer('ordinal').notNullable();
+    table.string('category', 100).nullable();
+    table.string('name', 100).nullable();
+    table.double('positionX').notNullable();
+    table.double('positionY').notNullable();
+    table.double('positionZ').notNullable();
+    table.double('directionX').notNullable();
+    table.double('directionY').notNullable();
+    table.double('directionZ').notNullable();
+    table.primary(['graphicLocationID', 'ordinal']);
+    table.index(['category'], 'ix_fsdGraphicLocationDirectionalLocators_category');
+  },
+
+  fsdGraphicLocationLocators: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('graphicLocationID').notNullable();
+    table.integer('ordinal').notNullable();
+    table.string('category', 100).nullable();
+    table.string('name', 100).nullable();
+    table.double('positionX').notNullable();
+    table.double('positionY').notNullable();
+    table.double('positionZ').notNullable();
+    table.primary(['graphicLocationID', 'ordinal']);
+    table.index(['category'], 'ix_fsdGraphicLocationLocators_category');
+  },
+
+  industryActivities: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('activityID').notNullable().primary();
+    table.text('description').nullable();
+    table.string('activityName', 100).nullable();
+  },
+
+  industryAssemblyLines: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('assemblyLineID').notNullable().primary();
+    table.string('name', 255).nullable();
+    table.text('description').nullable();
+    table.integer('activityID').nullable();
+    table.double('baseMaterialMultiplier').nullable();
+    table.double('baseTimeMultiplier').nullable();
+    table.double('baseCostMultiplier').nullable();
+  },
+
+  industryAssemblyLineDetails: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('assemblyLineID').notNullable();
+    table.string('detailSource', 20).notNullable();
+    table.integer('detailID').notNullable();
+    table.double('materialMultiplier').nullable();
+    table.double('timeMultiplier').nullable();
+    table.double('costMultiplier').nullable();
+    table.primary(['assemblyLineID', 'detailSource', 'detailID']);
+  },
+
+  industryInstallationTypes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('installationTypeID').notNullable().primary();
+    table.integer('typeID').nullable();
+  },
+
+  industryInstallationAssemblyLines: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('installationTypeID').notNullable();
+    table.integer('assemblyLineID').notNullable();
+    table.primary(['installationTypeID', 'assemblyLineID']);
+  },
+
+  industryModifierSources: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.string('activityName', 40).notNullable();
+    table.string('modifierType', 20).notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('dogmaAttributeID').nullable();
+    table.integer('filterID').nullable();
+    table.primary(['typeID', 'activityName', 'modifierType', 'sortOrder']);
+  },
+
+  industryTargetFilters: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('filterID').notNullable().primary();
+    table.string('name', 255).nullable();
+  },
+
+  industryTargetFilterCategories: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('filterID').notNullable();
+    table.integer('categoryID').notNullable();
+    table.primary(['filterID', 'categoryID']);
+  },
+
+  industryTargetFilterGroups: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('filterID').notNullable();
+    table.integer('groupID').notNullable();
+    table.primary(['filterID', 'groupID']);
+  },
+
+  localizationDgmAttributes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('attributeID').notNullable();
+    table.string('languageID', 20).notNullable();
+    table.string('displayName', 255).nullable();
+    table.text('description').nullable();
+    table.primary(['attributeID', 'languageID']);
+  },
+
+  localizationLanguages: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('languageIndex').notNullable().primary();
+    table.string('languageID', 20).notNullable();
+  },
+
+  repackagedVolumes: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable().primary();
+    table.double('volume').notNullable();
+  },
+
+  skillPlans: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('skillPlanID').notNullable().primary();
+    table.string('internalName', 255).nullable();
+    table.text('description').nullable();
+    table.integer('careerPathID').nullable();
+    table.integer('factionID').nullable();
+    table.string('name', 255).nullable();
+    table.integer('npcCorporationDivision').nullable();
+    table.index(['careerPathID'], 'ix_skillPlans_careerPathID');
+    table.index(['factionID'], 'ix_skillPlans_factionID');
+  },
+
+  skillPlanMilestones: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('skillPlanID').notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('typeID').notNullable();
+    table.integer('level').nullable();
+    table.primary(['skillPlanID', 'sortOrder']);
+    table.index(['typeID'], 'ix_skillPlanMilestones_typeID');
+  },
+
+  skillPlanSkillRequirements: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('skillPlanID').notNullable();
+    table.integer('sortOrder').notNullable();
+    table.integer('typeID').notNullable();
+    table.integer('level').notNullable();
+    table.primary(['skillPlanID', 'sortOrder']);
+    table.index(['typeID'], 'ix_skillPlanSkillRequirements_typeID');
+  },
+
+  skinMaterialNames: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('skinMaterialID').notNullable().primary();
+    table.string('materialName', 255).nullable();
+  },
+
+  stationStandingRestrictionServices: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('corporationID').notNullable();
+    table.integer('serviceID').notNullable();
+    table.double('standing').notNullable();
+    table.primary(['corporationID', 'serviceID']);
+  },
+
+  typeMaterials: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.integer('materialTypeID').notNullable();
+    table.integer('quantity').notNullable();
+    table.primary(['typeID', 'materialTypeID']);
+  },
+
+  typeRandomizedMaterials: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('typeID').notNullable();
+    table.integer('materialTypeID').notNullable();
+    table.integer('quantityMin').nullable();
+    table.integer('quantityMax').nullable();
+    table.primary(['typeID', 'materialTypeID']);
+  },
+
   crpActivities: (table, isMysql) => {
     if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
     table.integer('activityID').notNullable().primary();
@@ -370,6 +784,13 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.string('description', 4000).nullable();
     table.integer('iconID').nullable();
     if (isMysql) table.check('?? in (0,1)', ['scattered'], 'cnpcc_scatt');
+  },
+
+  crpNPCCorporationTrades: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.integer('corporationID').notNullable();
+    table.integer('typeID').notNullable();
+    table.primary(['corporationID', 'typeID']);
   },
 
   crpNPCDivisions: (table, isMysql) => {
@@ -941,6 +1362,11 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.integer('skinID').notNullable().primary();
     table.string('internalName', 70).nullable();
     table.integer('skinMaterialID').nullable();
+    boolCol(table, 'visibleTranquility', isMysql).nullable();
+    boolCol(table, 'allowCCPDevs', isMysql).nullable();
+    boolCol(table, 'visibleSerenity', isMysql).nullable();
+    boolCol(table, 'isStructureSkin', isMysql).nullable();
+    table.text('skinDescription').nullable();
   },
 
   staOperationServices: (table, isMysql) => {
@@ -1044,7 +1470,25 @@ export const tableOrder: string[] = [
   'agtAgentTypes', 'agtAgents', 'agtAgentsInSpace', 'agtResearchAgents',
   'certCerts', 'certMasteries', 'certSkills',
   'chrAncestries', 'chrAttributes', 'chrBloodlines', 'chrFactions', 'chrRaces',
-  'crpActivities', 'crpNPCCorporations', 'crpNPCDivisions',
+  'chrSchools', 'chrSchoolStartingStations', 'chrSchoolMap',
+  'accountingEntryTypes', 'agentTypes',
+  'attributeOrders', 'attributeOrderNormalAttributes', 'attributeOrderGroupedAttributes',
+  'blueprints',
+  'cloneStates', 'cloneStateSkills', 'compressibleTypes',
+  'dbuffs', 'dbuffModifiers', 'dogmaEffectCategories', 'dogmaUnits',
+  'dynamicItemAttributeRanges', 'dynamicItemInputOutputMappings', 'dynamicItemApplicableTypes',
+  'expertSystems', 'expertSystemSkills', 'expertSystemShipTypes',
+  'graphicMaterialSets', 'graphicMaterialSetColors',
+  'fsdGraphicIDs', 'fsdGraphicLocations', 'fsdGraphicLocationDirectionalLocators',
+  'fsdGraphicLocationLocators',
+  'industryActivities', 'industryAssemblyLines', 'industryAssemblyLineDetails',
+  'industryInstallationTypes', 'industryInstallationAssemblyLines', 'industryModifierSources',
+  'industryTargetFilters', 'industryTargetFilterCategories', 'industryTargetFilterGroups',
+  'localizationDgmAttributes', 'localizationLanguages', 'repackagedVolumes',
+  'skillPlans', 'skillPlanMilestones', 'skillPlanSkillRequirements',
+  'skinMaterialNames', 'stationStandingRestrictionServices',
+  'typeMaterials', 'typeRandomizedMaterials',
+  'crpActivities', 'crpNPCCorporations', 'crpNPCCorporationTrades', 'crpNPCDivisions',
   'dgmAttributeCategories', 'dgmAttributeTypes', 'dgmEffects', 'dgmTypeAttributes', 'dgmTypeEffects',
   'eveGraphics', 'eveIcons', 'eveUnits',
   'industryActivity', 'industryActivityMaterials', 'industryActivityProbabilities',

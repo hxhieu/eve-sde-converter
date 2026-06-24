@@ -33,7 +33,6 @@
 - crpActivities
 - crpNPCCorporationDivisions
 - crpNPCCorporationResearchFields
-- crpNPCCorporationTrades
 - dgmExpressions
 - industryActivityRaces
 - invControlTowerResourcePurposes
