@@ -451,6 +451,21 @@ function vectorComponent(vector: any, component: 'x' | 'y' | 'z', tableName: str
   return numberValue;
 }
 
+function optionalNumber(value: any): number | null {
+  if (value == null) return null;
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function requiredNumber(value: any, tableName: string, rowKey: string, columnName: string): number {
+  const numberValue = optionalNumber(value);
+  if (numberValue == null) {
+    throw new Error(`Invalid ${columnName} for ${tableName} row ${rowKey}`);
+  }
+
+  return numberValue;
+}
+
 function pushKeyValueRows(
   rows: InsertRow[],
   table: string,
@@ -548,6 +563,63 @@ export function processTable(tableName: string, unzippedDir: string, hoboleaksDi
           ],
         });
       }
+    }
+    return rows;
+  } else if (tableName === 'fsdSofHulls') {
+    const data = readRequiredFsdJson(fsdDir, 'sofhulls.json', tableName);
+    const hulls = data.hulls ?? {};
+    const rows: InsertRow[] = [];
+    const columns = [
+      'resourcePath',
+      'redResourcePath',
+      'name',
+      'geometryResFilePath',
+      'boundingSphereCenterX',
+      'boundingSphereCenterY',
+      'boundingSphereCenterZ',
+      'boundingSphereRadius',
+      'shapeEllipsoidCenterX',
+      'shapeEllipsoidCenterY',
+      'shapeEllipsoidCenterZ',
+      'shapeEllipsoidRadiusX',
+      'shapeEllipsoidRadiusY',
+      'shapeEllipsoidRadiusZ',
+      'shapeEllipsoidRadiusMax',
+      'cacheRelPath',
+      'md5',
+      'size',
+      'compressedSize',
+    ];
+    for (const [resourcePath, hull] of Object.entries<any>(hulls)) {
+      const rowKey = String(resourcePath);
+      const boundingSphere = hull.boundingSphere ?? {};
+      const shapeCenter = hull.shapeEllipsoidCenter ?? {};
+      const shapeRadius = hull.shapeEllipsoidRadius ?? {};
+      rows.push({
+        table: tableName,
+        columns,
+        values: [
+          hull.resourcePath ?? resourcePath,
+          hull.redResourcePath ?? null,
+          hull.name ?? null,
+          hull.geometryResFilePath ?? null,
+          optionalNumber(boundingSphere.centerX),
+          optionalNumber(boundingSphere.centerY),
+          optionalNumber(boundingSphere.centerZ),
+          requiredNumber(boundingSphere.radius, tableName, rowKey, 'boundingSphereRadius'),
+          optionalNumber(shapeCenter.x),
+          optionalNumber(shapeCenter.y),
+          optionalNumber(shapeCenter.z),
+          optionalNumber(shapeRadius.x),
+          optionalNumber(shapeRadius.y),
+          optionalNumber(shapeRadius.z),
+          optionalNumber(shapeRadius.max),
+          hull.cacheRelPath ?? null,
+          hull.md5 ?? null,
+          optionalNumber(hull.size),
+          optionalNumber(hull.compressedSize),
+        ],
+      });
     }
     return rows;
   } else if (tableName === 'invUniqueNames') {
@@ -1684,6 +1756,7 @@ const fsdTables = new Set([
   'fsdGraphicLocations',
   'fsdGraphicLocationDirectionalLocators',
   'fsdGraphicLocationLocators',
+  'fsdSofHulls',
 ]);
 
 /** Generate INSERT SQL for static-data tables using knex MySQL query builder. */
@@ -2296,6 +2369,10 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
   },
   'fsdGraphicLocationLocators': {
     files: ['graphiclocations.json'],
+    fields: [] // Custom processing in processTable function
+  },
+  'fsdSofHulls': {
+    files: ['sofhulls.json'],
     fields: [] // Custom processing in processTable function
   },
   'industryActivities': {

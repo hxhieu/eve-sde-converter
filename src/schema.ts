@@ -588,6 +588,31 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.index(['category'], 'ix_fsdGraphicLocationLocators_category');
   },
 
+  fsdSofHulls: (table, isMysql) => {
+    if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
+    table.string('resourcePath', 500).notNullable().primary();
+    table.string('redResourcePath', 500).nullable();
+    table.string('name', 100).nullable();
+    table.string('geometryResFilePath', 500).nullable();
+    table.double('boundingSphereCenterX').nullable();
+    table.double('boundingSphereCenterY').nullable();
+    table.double('boundingSphereCenterZ').nullable();
+    table.double('boundingSphereRadius').notNullable();
+    table.double('shapeEllipsoidCenterX').nullable();
+    table.double('shapeEllipsoidCenterY').nullable();
+    table.double('shapeEllipsoidCenterZ').nullable();
+    table.double('shapeEllipsoidRadiusX').nullable();
+    table.double('shapeEllipsoidRadiusY').nullable();
+    table.double('shapeEllipsoidRadiusZ').nullable();
+    table.double('shapeEllipsoidRadiusMax').nullable();
+    table.string('cacheRelPath', 500).nullable();
+    table.string('md5', 32).nullable();
+    table.integer('size').nullable();
+    table.integer('compressedSize').nullable();
+    table.index(['redResourcePath'], 'ix_fsdSofHulls_redResourcePath');
+    table.index(['name'], 'ix_fsdSofHulls_name');
+  },
+
   industryActivities: (table, isMysql) => {
     if (isMysql) { table.engine('InnoDB'); table.charset('utf8mb4'); }
     table.integer('activityID').notNullable().primary();
@@ -1480,7 +1505,7 @@ export const tableOrder: string[] = [
   'expertSystems', 'expertSystemSkills', 'expertSystemShipTypes',
   'graphicMaterialSets', 'graphicMaterialSetColors',
   'fsdGraphicIDs', 'fsdGraphicLocations', 'fsdGraphicLocationDirectionalLocators',
-  'fsdGraphicLocationLocators',
+  'fsdGraphicLocationLocators', 'fsdSofHulls',
   'industryActivities', 'industryAssemblyLines', 'industryAssemblyLineDetails',
   'industryInstallationTypes', 'industryInstallationAssemblyLines', 'industryModifierSources',
   'industryTargetFilters', 'industryTargetFilterCategories', 'industryTargetFilterGroups',
