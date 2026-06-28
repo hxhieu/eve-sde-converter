@@ -2223,6 +2223,7 @@ export const tableMappings: Record<string, { files: string[]; fields: Array<stri
       'mass',
       'volume',
       'capacity',
+      'radius',
       'portionSize',
       'raceID',
       'basePrice',

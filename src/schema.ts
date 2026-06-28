@@ -1109,6 +1109,7 @@ export const tableDefinitions: Record<string, TableDefineFn> = {
     table.double('mass').nullable();
     table.double('volume').nullable();
     table.double('capacity').nullable();
+    table.double('radius').nullable();
     table.integer('portionSize').nullable();
     table.integer('raceID').nullable();
     table.decimal('basePrice', 19, 4).nullable();
